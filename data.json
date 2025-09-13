@@ -28,7 +28,6 @@
     ]
   },
 
-  /* ✦ NEW: time series for price charts (demo values) */
   "prices": {
     "c-RDW": [
       { "date": "2025-01-02", "close": 5.10 },
@@ -47,7 +46,6 @@
     ]
   },
 
-  /* ✦ UPDATED: timeline events to plot on the chart (past + future) */
   "timelines": {
     "c-RDW": [
       {
@@ -76,7 +74,6 @@
         "title": "Leadership/Program milestone",
         "note": "Contextual leadership update relevant to Golden Dome."
       },
-      /* FUTURE events (show to the right of 'Today') */
       {
         "date": "2025-10-31",
         "type": "allocation",
