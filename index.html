@@ -1,147 +1,135 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gov → Policy → Public Co.</title>
-<style>
-  :root { --bg:#0f172a; --panel:#0b1222; --text:#e5e7eb; --sub:#94a3b8; --border:#334155; }
-  *{ box-sizing:border-box }
-  body{
-    margin:0;
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial;
-    background:var(--bg); color:var(--text);
-    font-size:18px;           /* ← make text bigger (try 20px if you want) */
-    line-height:1.45;
+<main class="wrap" style="padding-top:12px">
+  <!-- Top controls (reuse your search/select if you like) -->
+  <section class="row" style="margin-bottom:12px">
+    <input id="search" placeholder="Search members, artifacts, companies…" />
+    <select id="branch">
+      <option value="">All branches</option>
+      <option value="legislative">Legislative</option>
+      <option value="executive">Executive</option>
+      <option value="judicial">Judicial</option>
+    </select>
+  </section>
+
+  <!-- Canvas row -->
+  <section class="panel" style="overflow:hidden">
+    <svg id="canvas" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet" style="width:100%;height:60vh">
+      <!-- Columns guides -->
+      <g id="cols" fill="none" stroke="rgba(255,255,255,.06)">
+        <line x1="140" y1="0" x2="140" y2="600"/>
+        <line x1="500" y1="0" x2="500" y2="600"/>
+        <line x1="900" y1="0" x2="900" y2="600"/>
+      </g>
+
+      <!-- Column labels -->
+      <g font-size="14" fill="#94a3b8">
+        <text x="60"  y="30">Branches</text>
+        <text x="520" y="30">Policies / Laws / Rulings</text>
+        <text x="940" y="30">Public Companies</text>
+      </g>
+
+      <!-- Branch “buildings” -->
+      <g id="branches">
+        <!-- Capitol -->
+        <g class="node branch" data-branch="legislative" transform="translate(60,70)">
+          <rect width="160" height="70" rx="10" fill="#0b1222" stroke="#334155"/>
+          <text x="80" y="42" text-anchor="middle" fill="#e5e7eb" font-weight="600">Capitol</text>
+          <text x="80" y="60" text-anchor="middle" fill="#94a3b8" font-size="12">Legislative</text>
+        </g>
+        <!-- White House -->
+        <g class="node branch" data-branch="executive" transform="translate(60,170)">
+          <rect width="160" height="70" rx="10" fill="#0b1222" stroke="#334155"/>
+          <text x="80" y="42" text-anchor="middle" fill="#e5e7eb" font-weight="600">White House</text>
+          <text x="80" y="60" text-anchor="middle" fill="#94a3b8" font-size="12">Executive</text>
+        </g>
+        <!-- Supreme Court -->
+        <g class="node branch" data-branch="judicial" transform="translate(60,270)">
+          <rect width="160" height="70" rx="10" fill="#0b1222" stroke="#334155"/>
+          <text x="80" y="42" text-anchor="middle" fill="#e5e7eb" font-weight="600">Supreme Court</text>
+          <text x="80" y="60" text-anchor="middle" fill="#94a3b8" font-size="12">Judicial</text>
+        </g>
+      </g>
+
+      <!-- Artifact cards (auto-laid out) -->
+      <g id="artifacts"></g>
+
+      <!-- Company cards (auto-laid out) -->
+      <g id="companies"></g>
+
+      <!-- Edges -->
+      <g id="edges" fill="none" stroke="#3b82f6" stroke-opacity=".5"></g>
+    </svg>
+  </section>
+</main>
+
+<script>
+(async function(){
+  const data = await fetch('data.json').then(r=>r.json());
+
+  // Basic vertical layout helpers
+  const artX = 520, artY0 = 80, artDy = 90;
+  const coX  = 940, coY0  = 80, coDy  = 70;
+
+  // Index artifacts/companies for positions
+  const art = data.artifacts.map((a,i)=>({ ...a, x: artX, y: artY0 + i*artDy }));
+  const cos = data.companies.map((c,i)=>({ ...c, x: coX,  y: coY0  + i*coDy  }));
+
+  const A = Object.fromEntries(art.map(a=>[a.id,a]));
+  const C = Object.fromEntries(cos.map(c=>[c.id,c]));
+
+  // Render artifacts
+  const gA = document.getElementById('artifacts');
+  gA.innerHTML = art.map(a => `
+    <g class="node artifact" data-id="${a.id}" transform="translate(${a.x-160},${a.y-28})">
+      <rect width="320" height="56" rx="10" fill="#0b1222" stroke="#334155"></rect>
+      <text x="12" y="24" fill="#e5e7eb" font-weight="600">${a.short_title || a.title}</text>
+      <text x="12" y="40" fill="#94a3b8" font-size="12">${a.type} • ${a.status || ''}</text>
+    </g>
+  `).join('');
+
+  // Render companies
+  const gC = document.getElementById('companies');
+  gC.innerHTML = cos.map(c => `
+    <g class="node company" data-id="${c.id}" transform="translate(${c.x-160},${c.y-22})">
+      <rect width="320" height="44" rx="10" fill="#0b1222" stroke="#334155"></rect>
+      <text x="12" y="28" fill="#e5e7eb" font-weight="600">${c.name}${c.ticker?` (${c.ticker})`:''}</text>
+    </g>
+  `).join('');
+
+  // Render edges (artifact→company)
+  const gE = document.getElementById('edges');
+  function curve(x1,y1,x2,y2){
+    const mx = (x1+x2)/2;
+    return `M${x1},${y1} C ${mx},${y1} ${mx},${y2} ${x2},${y2}`;
   }
-  header{ position:sticky; top:0; backdrop-filter:saturate(1.2) blur(6px); background:#0f172ad0; border-bottom:1px solid var(--border); }
-  .wrap{ max-width:1400px;    /* ← widen the page (try 1600px if you want) */
-         margin:0 auto; padding:12px 16px; }
-  h1{ margin:0; font-size:24px }   /* ← larger title */
-  .grid{ display:grid; gap:16px; grid-template-columns:1fr; }
-  @media (min-width:980px){ .grid{ grid-template-columns:repeat(3,1fr); } }
-  .panel{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; }
-  .list{ max-height:78vh; overflow:auto; display:grid; gap:12px; }
-  .card{ border:1px solid var(--border); border-radius:14px; padding:14px; background:#0b1222 }
-  .muted{ color:var(--sub); font-size:14px }  /* ← slightly bigger meta text */
-  select, input{
-    width:100%; background:#0b1222; color:var(--text); border:1px solid var(--border);
-    border-radius:12px; padding:10px 12px; font-size:16px;
-  }
-  .row{ display:grid; gap:10px; grid-template-columns:1fr; margin-top:10px }
-  @media (min-width:640px){ .row{ grid-template-columns:1fr 1fr } }
-  button{ background:#0b1222; color:var(--text); border:1px solid var(--border);
-          border-radius:12px; padding:8px 12px; font-size:16px; }
-  .badges{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px }
-  .badge{ font-size:12px; padding:3px 8px; border:1px solid var(--border); border-radius:999px; background:#0f172a }
-</style>
+  gE.innerHTML = data.edges.artifact_company.map(e=>{
+    const a=A[e.from], c=C[e.to]; if(!a||!c) return '';
+    return `<path d="${curve(a.x+0, a.y, c.x-160, c.y)}" stroke-width="2" />`;
+  }).join('');
 
-</head>
-<body>
-  <header>
-    <div class="wrap">
-      <h1>Gov → Policy → Public Co.</h1>
-      <div class="row">
-        <input id="q" placeholder="Search policies… (title, tags, status)" />
-        <select id="policySelect">
-          <option value="">Filter by policy…</option>
-        </select>
-      </div>
-    </div>
-  </header>
+  // Hover highlight (design demo)
+  const svg = document.getElementById('canvas');
+  svg.addEventListener('mouseover', e=>{
+    const n = e.target.closest('.node'); if(!n) return;
+    svg.style.setProperty('--fade','.2');
+    document.querySelectorAll('#edges path').forEach(p=>p.style.opacity=.15);
+  });
+  svg.addEventListener('mouseout', e=>{
+    svg.style.removeProperty('--fade');
+    document.querySelectorAll('#edges path').forEach(p=>p.style.opacity=.5);
+  });
 
-  <main class="wrap" style="padding-top:12px">
-    <section class="grid">
-      <div class="panel">
-        <h3>Members</h3>
-        <div id="members" class="list"></div>
-      </div>
-      <div class="panel">
-        <h3>Policies</h3>
-        <div id="policies" class="list"></div>
-      </div>
-      <div class="panel">
-        <h3>Impacted Companies</h3>
-        <div class="muted" style="margin:6px 0 10px">Select a policy to filter the list.</div>
-        <div id="impacts" class="list"></div>
-      </div>
-    </section>
-  </main>
-
-  <script>
-    // --- helpers ---
-    const $ = (id) => document.getElementById(id);
-    const num = (x) => (typeof x === "number" ? x.toLocaleString() : x);
-    const money = (x) => (typeof x === "number" ? "$" + x.toLocaleString() : "");
-
-    // --- state ---
-    const S = { data: null, activeUID: "", q: "" };
-
-    // --- renderers ---
-    function renderMembers() {
-      const box = $("members");
-      box.innerHTML = S.data.members.map(m => `
-        <div class="card">
-          <div><strong>${m.name}</strong></div>
-          <div class="muted">${(m.chamber||"").toUpperCase()}${m.state?(" • "+m.state):""}${m.party?(" • "+m.party):""}</div>
-          ${m.role ? `<div class="muted">${m.role}</div>` : "" }
-        </div>`).join("");
-    }
-
-    function renderPolicies() {
-      const q = S.q.toLowerCase();
-      const list = S.data.policies.filter(p =>
-        !q || [p.title, p.short_title, p.status, ...(p.tags||[])].join(" ").toLowerCase().includes(q)
-      );
-      $("policies").innerHTML = list.map(p => `
-        <button class="card" data-uid="${p.uid}">
-          <div><strong>${p.title}</strong></div>
-          ${p.short_title?`<div class="muted">${p.short_title}</div>`:""}
-          <div class="muted">${p.status || "—"}${p.impacts_total!=null ? ` • impacts: ${num(p.impacts_total)}` : ""}</div>
-          ${Array.isArray(p.tags)&&p.tags.length?`<div class="badges">${p.tags.map(t=>`<span class="badge">${t}</span>`).join("")}</div>`:""}
-        </button>`).join("");
-    }
-
-    function renderImpacts() {
-      const box = $("impacts");
-      const rows = S.data.impacts.filter(im => !S.activeUID || im.policy_uid === S.activeUID);
-      if (!rows.length) { box.innerHTML = `<div class="muted">No impacts to show.</div>`; return; }
-      box.innerHTML = rows.map(im => `
-        <div class="card">
-          <div><strong>${im.company.name}${im.company.ticker?` (${im.company.ticker})`:""}</strong></div>
-          <div class="muted">Policy: ${im.policy_uid} • Link: ${im.link_type || "—"} • conf ${Math.round((im.confidence||0)*100)}%</div>
-          ${im.via_award ? `<div class="muted">${money(im.via_award.amount)} • ${im.via_award.award_type} • ${im.via_award.awarding_agency}</div>` : ""}
-        </div>`).join("");
-    }
-
-    function fillPolicyDropdown() {
-      const sel = $("policySelect");
-      sel.innerHTML = `<option value="">Filter by policy…</option>` +
-        S.data.policies.map(p => `<option value="${p.uid}">${p.short_title || p.title.slice(0,80)}</option>`).join("");
-    }
-
-    // --- events ---
-    $("q").addEventListener("input", (e) => { S.q = e.target.value; renderPolicies(); });
-    $("policySelect").addEventListener("change", (e) => { S.activeUID = e.target.value; renderImpacts(); });
-    $("policies").addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-uid]");
-      if (!btn) return;
-      S.activeUID = btn.dataset.uid;
-      $("policySelect").value = S.activeUID;
-      renderImpacts();
+  // Click trace: click an artifact to thicken its edges
+  svg.addEventListener('click', e=>{
+    const artNode = e.target.closest('.artifact');
+    if(!artNode) return;
+    const id = artNode.getAttribute('data-id');
+    document.querySelectorAll('#edges path').forEach(p=>p.setAttribute('stroke-width','2'));
+    data.edges.artifact_company.forEach((edge, i)=>{
+      if(edge.from === id){
+        const path = gE.children[i];
+        if(path) path.setAttribute('stroke-width','4');
+      }
     });
-
-    // --- boot ---
-    fetch("data.json").then(r => r.json()).then(data => {
-      S.data = data;
-      renderMembers();
-      renderPolicies();
-      renderImpacts();
-      fillPolicyDropdown();
-    }).catch(err => {
-      console.error(err);
-      document.body.insertAdjacentHTML("beforeend", `<div class="wrap"><div class="panel">Failed to load data.json</div></div>`);
-    });
-  </script>
-</body>
-</html>
+  });
+})();
+</script>
