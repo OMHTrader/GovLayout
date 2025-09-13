@@ -1,1 +1,184 @@
+<!-- index2.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ticker Timeline — Trade Context</title>
+  <style>
+    :root{ --bg:#0f172a; --panel:#0b1222; --text:#e5e7eb; --sub:#94a3b8; --border:#334155; --accent:#3b82f6; }
+    *{ box-sizing:border-box }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial;
+      background:var(--bg); color:var(--text); font-size:18px; line-height:1.45; }
+    header{ position:sticky; top:0; background:#0f172ad0; border-bottom:1px solid var(--border); backdrop-filter:saturate(1.05) blur(6px); }
+    .wrap{ max-width:1100px; margin:0 auto; padding:12px 16px; }
+    h1{ margin:0; font-size:22px }
+    .controls{ display:grid; gap:10px; grid-template-columns:1fr; margin-top:10px }
+    @media (min-width:780px){ .controls{ grid-template-columns:2fr 1.2fr .8fr } }
+    input, select, button{
+      background:#0b1222; color:var(--text); border:1px solid var(--border);
+      border-radius:12px; padding:10px 12px; font-size:16px;
+    }
+    button:disabled{ opacity:.5; cursor:not-allowed }
+    .panel{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; margin-top:12px }
+    .muted{ color:var(--sub); font-size:14px }
+    .pill{ padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--sub) }
+    /* timeline */
+    .tl{ position:relative; margin-top:8px; }
+    .tl:before{ content:""; position:absolute; left:28px; top:0; bottom:0; width:2px; background:#304055; }
+    .evt{ position:relative; display:grid; grid-template-columns:56px 1fr; gap:12px; padding:10px 0; }
+    .dot{ width:12px; height:12px; border-radius:50%; border:2px solid var(--accent); background:#0b1222; position:absolute; left:22px; top:18px; }
+    .card{ background:#0b1222; border:1px solid var(--border); border-radius:14px; padding:12px; }
+    .row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap }
+    .date{ width:56px; font-size:13px; color:var(--sub); text-align:right; padding-top:6px }
+    .title{ font-weight:600 }
+    .range{ font-size:13px; color:var(--sub) }
+    .badges{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px }
+    a.source{ color:#93c5fd; text-decoration:none; border-bottom:1px dotted #93c5fd }
+    .warn{ border-style:dashed }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Ticker Timeline — Trade Context</h1>
+      <div class="controls">
+        <!-- input with datalist dropdown -->
+        <input id="searchTicker" list="tickersList" placeholder="Type a ticker (e.g., RDW) and press Enter…" />
+        <datalist id="tickersList"></datalist>
+
+        <!-- explicit select -->
+        <select id="tickerSelect"><option value="">Select a ticker…</option></select>
+
+        <button id="clearSel">Clear</button>
+      </div>
+      <div class="muted" id="hint">Pick a ticker to see dated events, policy milestones, and insider/company links.</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="panel">
+      <div class="row">
+        <span class="pill" id="selTicker">—</span>
+        <span class="pill" id="selName">—</span>
+      </div>
+      <div class="tl" id="timeline"></div>
+    </section>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    const S = {
+      data:null,
+      tickerToId:{},
+      activeCompanyId:""
+    };
+
+    function fmtDate(s){
+      if(!s) return "";
+      const d = new Date(s+"T00:00:00");
+      if(Number.isNaN(d.getTime())) return s;
+      const mo = d.toLocaleString(undefined,{month:"short"});
+      return `${mo} ${String(d.getDate()).padStart(2,"0")}, ${d.getFullYear()}`;
+    }
+    function fmtRange(ev){
+      if(ev.start && ev.end) return `${fmtDate(ev.start)} – ${fmtDate(ev.end)}`;
+      return fmtDate(ev.date || ev.start || ev.end);
+    }
+
+    function renderTimeline(cid){
+      const tl = $("timeline");
+      tl.innerHTML = "";
+      if(!cid){ $("selTicker").textContent="—"; $("selName").textContent="—"; return; }
+
+      const co = S.data.companies.find(c=>c.id===cid);
+      $("selTicker").textContent = co.ticker || "—";
+      $("selName").textContent = co.name || "—";
+
+      const events = (S.data.timelines && S.data.timelines[cid]) ? [...S.data.timelines[cid]] : [];
+      // sort by start/date ascending
+      events.sort((a,b)=>{
+        const ax = new Date(a.start || a.date || "2100-01-01").getTime();
+        const bx = new Date(b.start || b.date || "2100-01-01").getTime();
+        return ax - bx;
+      });
+
+      for(const ev of events){
+        const li = document.createElement("div");
+        li.className = "evt";
+        const dv = document.createElement("div");
+        dv.className = "date";
+        dv.textContent = fmtRange(ev);
+        const card = document.createElement("div");
+        card.className = "card" + (ev.status==="unverified" ? " warn" : "");
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = ev.title || ev.type || "Event";
+        const note = document.createElement("div");
+        note.textContent = ev.note || "";
+        const badges = document.createElement("div");
+        badges.className = "badges";
+        if(ev.type){ const b=document.createElement("span"); b.className="pill"; b.textContent=ev.type; badges.appendChild(b); }
+        if(typeof ev.confidence==="number"){ const b=document.createElement("span"); b.className="pill"; b.textContent=`conf ${Math.round(ev.confidence*100)}%`; badges.appendChild(b); }
+        if(ev.source){ const b=document.createElement("a"); b.href=ev.source; b.target="_blank"; b.rel="noopener"; b.className="source"; b.textContent="source"; badges.appendChild(b); }
+        card.append(title);
+        if(ev.range_label){ const r=document.createElement("div"); r.className="range"; r.textContent=ev.range_label; card.appendChild(r); }
+        if(note.textContent) card.appendChild(note);
+        if(badges.children.length) card.appendChild(badges);
+        li.append(dv, card, dot);
+        tl.appendChild(li);
+      }
+    }
+
+    function setCompanyById(cid){
+      S.activeCompanyId = cid || "";
+      $("tickerSelect").value = cid || "";
+      const comp = S.data.companies.find(c=>c.id===cid);
+      $("searchTicker").value = comp ? (comp.ticker || "") : "";
+      renderTimeline(S.activeCompanyId);
+    }
+
+    // controls
+    $("clearSel").addEventListener("click", ()=> setCompanyById(""));
+
+    $("tickerSelect").addEventListener("change", e => setCompanyById(e.target.value));
+
+    $("searchTicker").addEventListener("keydown", e=>{
+      if(e.key==="Enter"){
+        const val = (e.target.value||"").trim().toLowerCase();
+        const id = S.tickerToId[val];
+        if(id) setCompanyById(id);
+      }
+    });
+    $("searchTicker").addEventListener("change", e=>{
+      const val = (e.target.value||"").trim().toLowerCase();
+      const id = S.tickerToId[val];
+      if(id) setCompanyById(id);
+    });
+
+    // boot
+    fetch("./data.json").then(r=>r.json()).then(d=>{
+      S.data = d;
+      // fill ticker maps + UI
+      const dl = $("tickersList");
+      const sel = $("tickerSelect");
+      sel.innerHTML = `<option value="">Select a ticker…</option>`;
+      d.companies.forEach(c=>{
+        const t = (c.ticker||"").trim();
+        if(t){ S.tickerToId[t.toLowerCase()] = c.id; const o=document.createElement("option"); o.value=t; dl.appendChild(o); }
+        const so = document.createElement("option");
+        so.value = c.id; so.textContent = `${t || "—"} — ${c.name}`;
+        sel.appendChild(so);
+      });
+      renderTimeline("");
+    }).catch(err=>{
+      console.error(err);
+      document.body.insertAdjacentHTML("beforeend",'<div class="wrap"><div class="panel">Failed to load ./data.json</div></div>');
+    });
+  </script>
+</body>
+</html>
 
