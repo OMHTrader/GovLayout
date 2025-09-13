@@ -13,7 +13,10 @@
     *{ box-sizing:border-box }
     body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial;
       background:var(--bg); color:var(--text); font-size:18px; line-height:1.45; }
-    header{ position:sticky; top:0; background:#0f172ad0; border-bottom:1px solid var(--border); backdrop-filter:saturate(1.05) blur(6px); }
+    header{
+      position:sticky; top:0; z-index:1000;
+      background:#0f172ad0; border-bottom:1px solid var(--border); backdrop-filter:saturate(1.05) blur(6px);
+    }
     .wrap{ max-width:1200px; margin:0 auto; padding:12px 16px; }
     h1{ margin:0; font-size:22px }
     .controls{ display:grid; gap:10px; grid-template-columns:1fr 1fr auto auto; margin-top:10px }
@@ -39,14 +42,13 @@
       <div class="controls">
         <a class="button" href="index.html" title="Back to graph">← Back</a>
 
-        <!-- type-ahead with dropdown -->
         <input id="searchTicker" list="tickersList" placeholder="Type a ticker (e.g., RDW) and press Enter…" />
         <datalist id="tickersList"></datalist>
 
         <select id="tickerSelect"><option value="">Select a ticker…</option></select>
         <button id="clearSel">Clear</button>
       </div>
-      <div class="muted hint">Past events plot at their dates on the price line. Future events/targets appear out to the right of “today.”</div>
+      <div class="muted hint" id="hostHint" style="display:none;margin-top:6px"></div>
     </div>
   </header>
 
@@ -64,16 +66,24 @@
   </main>
 
   <script>
+    (function(){
+      const hint = document.getElementById('hostHint');
+      const isRepoView = location.hostname === 'github.com' || location.pathname.includes('/blob/');
+      if(isRepoView){
+        hint.style.display = 'block';
+        hint.textContent = 'Open this via your GitHub Pages site (https://<user>.github.io/<repo>/). The repo viewer blocks fetching ./data.json.';
+      }
+    })();
+
     const $ = id => document.getElementById(id);
 
     const S = {
       data:null,
       tickerToId:{},
       activeCompanyId:"",
-      today: new Date() // viewer's local "today"
+      today: new Date()
     };
 
-    // ---------- utilities ----------
     function parseDate(s){ return new Date(s + "T00:00:00"); }
     function fmtDate(d){
       if(!(d instanceof Date)) d = parseDate(d);
@@ -83,7 +93,6 @@
     function nearPrice(prices, d){
       if(!prices || !prices.length) return null;
       const t = d.getTime();
-      // binary-ish search for nearest by time
       let best=prices[0], bestDiff=Math.abs(new Date(prices[0].date).getTime()-t);
       for(const p of prices){
         const dt = Math.abs(new Date(p.date).getTime()-t);
@@ -91,7 +100,6 @@
       }
       return best.close;
     }
-
     function extentDates(prices, events){
       let min = prices.length ? parseDate(prices[0].date) : new Date();
       let max = prices.length ? parseDate(prices[prices.length-1].date) : new Date();
@@ -101,11 +109,9 @@
         if(ev.date){ const d=parseDate(ev.date); if(d<min) min=d; if(d>max) max=d; }
         if(ev.target_date){ const d=parseDate(ev.target_date); if(d>max) max=d; }
       }
-      // add right padding (~20 business days)
       max = new Date(max.getTime() + 1000*60*60*24*28);
       return [min,max];
     }
-
     function extentPrices(prices, events){
       let lo=Infinity, hi=-Infinity;
       for(const p of prices){ lo=Math.min(lo,p.close); hi=Math.max(hi,p.close); }
@@ -113,12 +119,10 @@
         if(typeof ev.target_price==="number"){ lo=Math.min(lo, ev.target_price); hi=Math.max(hi, ev.target_price); }
       }
       if(!isFinite(lo)||!isFinite(hi)){ lo=0; hi=1; }
-      // pad by 10%
       const pad = (hi-lo)*0.1 || 1;
       return [lo-pad, hi+pad];
     }
 
-    // ---------- rendering ----------
     function renderChart(cid){
       const svg = $("chart");
       svg.innerHTML = "";
@@ -138,7 +142,6 @@
         $("caption").textContent = `${co.ticker || ""} — ${co.name}`;
       }
 
-      // sort by date asc
       prices.sort((a,b)=> a.date.localeCompare(b.date));
       events.sort((a,b)=>{
         const ax = a.start||a.date||a.target_date||"2100-01-01";
@@ -156,7 +159,6 @@
       const [y0,y1] = extentPrices(prices, events);
       const y = (v)=> top + (1 - ( (v - y0)/(y1 - y0) )) * (H-top-bottom);
 
-      // grid + axes
       const g = (tag,attrs) => {
         const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
         for(const k in attrs) el.setAttribute(k, attrs[k]);
@@ -164,36 +166,27 @@
         return el;
       };
 
-      // background grid y
       const yTicks = 5;
       for(let i=0;i<=yTicks;i++){
-        const yy = lerp(top, H-bottom, i/yTicks);
+        const yy = top + (H-top-bottom) * (i/yTicks);
         g("line",{x1:left, y1:yy, x2:W-right, y2:yy, stroke:"var(--grid)", "stroke-width":"1"});
-        const val = lerp(y1,y0, i/yTicks);
+        const val = y1 - (y1-y0) * (i/yTicks);
         const tx = g("text",{x:left-10, y:yy+4, fill:"var(--sub)", "text-anchor":"end", "font-size":"12"});
         tx.textContent = "$" + (Math.round(val*100)/100).toLocaleString();
       }
 
-      // x ticks monthly
       const months = [];
-      const tmp = new Date(d0.getTime());
-      tmp.setDate(1);
-      while(tmp <= d1){
-        months.push(new Date(tmp.getTime()));
-        tmp.setMonth(tmp.getMonth()+1);
-      }
+      const tmp = new Date(d0.getTime()); tmp.setDate(1);
+      while(tmp <= d1){ months.push(new Date(tmp.getTime())); tmp.setMonth(tmp.getMonth()+1); }
       for(const md of months){
         const xx = x(md);
         g("line",{x1:xx, y1:H-bottom, x2:xx, y2:H-bottom+6, stroke:"var(--axis)"});
         const tt = g("text",{x:xx, y:H-bottom+22, fill:"var(--sub)", "text-anchor":"middle", "font-size":"12"});
         tt.textContent = md.toLocaleString(undefined,{month:"short", year: (md.getMonth()===0 ? "numeric" : undefined)});
       }
-
-      // axis lines
       g("line",{x1:left, y1:H-bottom, x2:W-right, y2:H-bottom, stroke:"var(--axis)", "stroke-width":"1"});
       g("line",{x1:left, y1:top, x2:left, y2:H-bottom, stroke:"var(--axis)", "stroke-width":"1"});
 
-      // today line
       const todayX = x(new Date(S.today.getFullYear(), S.today.getMonth(), S.today.getDate()));
       if(todayX>left && todayX<W-right){
         g("line",{x1:todayX, y1:top, x2:todayX, y2:H-bottom, stroke:"#94a3b8", "stroke-dasharray":"4 4"});
@@ -201,7 +194,6 @@
         tt.textContent = "Today";
       }
 
-      // price line
       const path = prices.map((p,i)=>{
         const px = x(parseDate(p.date));
         const py = y(p.close);
@@ -209,73 +201,48 @@
       }).join(" ");
       g("path",{d:path, fill:"none", stroke:"var(--line)", "stroke-width":"2.5"});
 
-      // shaded quarter windows, if any
       for(const ev of events){
         if(ev.start && ev.end){
           const x1 = x(parseDate(ev.start));
           const x2 = x(parseDate(ev.end));
-          const rect = g("rect",{
+          g("rect",{
             x:Math.min(x1,x2), y:top, width:Math.abs(x2-x1), height:(H-top-bottom),
             fill:"var(--band)", "fill-opacity":"0.25", stroke:"var(--border)"
           });
-          // label
           const tx = g("text",{x:(x1+x2)/2, y:top+14, fill:"var(--sub)", "font-size":"12","text-anchor":"middle"});
           tx.textContent = ev.title || ev.type || "window";
         }
       }
 
-      // markers (past & future)
       function marker(cx, cy, color, label){
-        const dot = g("circle",{cx, cy, r:5, fill:color, stroke:"#0b1222", "stroke-width":"1.5"});
+        g("circle",{cx, cy, r:5, fill:color, stroke:"#0b1222", "stroke-width":"1.5"});
         if(label){
           const ty = cy - 10;
           const t = g("text",{x:cx, y:ty, fill:color, "text-anchor":"middle", "font-size":"12"});
           t.textContent = label;
         }
+        g("line",{x1:cx, y1:cy+6, x2:cx, y2:H-bottom, stroke:color, "stroke-opacity":"0.25"});
       }
 
       const lastPrice = prices.length ? prices[prices.length-1].close : null;
-
       for(const ev of events){
-        // determine date for plotting
         const d = ev.date ? parseDate(ev.date) : (ev.target_date ? parseDate(ev.target_date) : null);
         if(!d) continue;
-
         const isFuture = d > S.today;
         const xx = x(d);
-
-        // when we can anchor to price
         let yy = null;
         if(!isFuture){
           const pv = nearPrice(prices, d);
           if(typeof pv==="number") yy = y(pv);
         }
-
-        // target price if provided
-        if(typeof ev.target_price === "number"){
-          yy = y(ev.target_price);
-        }
-
-        // If still no y, default to last price line or a comfortable baseline
-        if(yy===null){
-          yy = typeof lastPrice==="number" ? y(lastPrice) : y((y0+y1)/2);
-        }
-
+        if(typeof ev.target_price === "number"){ yy = y(ev.target_price); }
+        if(yy===null){ yy = typeof lastPrice==="number" ? y(lastPrice) : y(( (y0+y1)/2 )); }
         const color = typeof ev.target_price === "number" ? "var(--target)" : (isFuture ? "var(--future)" : "var(--past)");
         const label = ev.title || ev.type || "";
-
         marker(xx, yy, color, label);
-
-        // thin vertical guide for readability
-        g("line",{x1:xx, y1:yy+6, x2:xx, y2:H-bottom, stroke:color, "stroke-opacity":"0.25"});
       }
-
-      // target price “edged to right”: if you want an extra dedicated marker beyond last event
-      // we’ll auto-place any event with type:"target" or any event having target_price & target_date in the future
-      // (already handled above). Nothing else needed here.
     }
 
-    // ---------- selection ----------
     function setCompanyById(cid){
       S.activeCompanyId = cid || "";
       $("tickerSelect").value = cid || "";
@@ -283,18 +250,18 @@
       $("searchTicker").value = comp ? (comp.ticker || "") : "";
       renderChart(S.activeCompanyId);
     }
-
     function getQueryTicker(){
       const q = new URLSearchParams(location.search);
       const t = (q.get("ticker") || "").trim().toLowerCase();
       return t || "";
     }
+    function dataUrl(){ return new URL('./data.json', location.href).href; }
 
-    // ---------- boot ----------
-    fetch("./data.json").then(r=>r.json()).then(d=>{
+    fetch(dataUrl(), {cache:'no-store'}).then(r=>{
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }).then(d=>{
       S.data = d;
-
-      // fill ticker maps + UI
       const dl = $("tickersList");
       const sel = $("tickerSelect");
       sel.innerHTML = `<option value="">Select a ticker…</option>`;
@@ -306,11 +273,9 @@
         sel.appendChild(so);
       });
 
-      // preselect from ?ticker=RDW
       const qt = getQueryTicker();
       if(qt && S.tickerToId[qt]) setCompanyById(S.tickerToId[qt]); else renderChart("");
 
-      // controls
       $("clearSel").addEventListener("click", ()=> setCompanyById(""));
       $("tickerSelect").addEventListener("change", e => setCompanyById(e.target.value));
       $("searchTicker").addEventListener("keydown", e=>{
@@ -325,14 +290,13 @@
         const id = S.tickerToId[val];
         if(id) setCompanyById(id);
       });
-
     }).catch(err=>{
-      console.error(err);
+      console.error('Failed to load data.json:', err);
       const svg = $("chart");
       svg.innerHTML = "";
       const t = document.createElementNS("http://www.w3.org/2000/svg","text");
       t.setAttribute("x","40"); t.setAttribute("y","40");
-      t.setAttribute("fill","#fca5a5"); t.textContent = "Failed to load ./data.json";
+      t.setAttribute("fill","#fca5a5"); t.textContent = "Failed to load ./data.json. If viewing on github.com, open your GitHub Pages URL.";
       svg.appendChild(t);
     });
   </script>
