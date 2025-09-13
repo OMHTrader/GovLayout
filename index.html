@@ -1,135 +1,232 @@
-<main class="wrap" style="padding-top:12px">
-  <!-- Top controls (reuse your search/select if you like) -->
-  <section class="row" style="margin-bottom:12px">
-    <input id="search" placeholder="Search members, artifacts, companies…" />
-    <select id="branch">
-      <option value="">All branches</option>
-      <option value="legislative">Legislative</option>
-      <option value="executive">Executive</option>
-      <option value="judicial">Judicial</option>
-    </select>
-  </section>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gov → Policy → Public Co. (Triangle)</title>
+  <style>
+    :root{ --bg:#0f172a; --panel:#0b1222; --text:#e5e7eb; --sub:#94a3b8; --border:#334155; }
+    *{ box-sizing:border-box }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial;
+      background:var(--bg); color:var(--text); font-size:18px; line-height:1.45; }
+    header{ position:sticky; top:0; background:#0f172ad0; border-bottom:1px solid var(--border); backdrop-filter:saturate(1.05) blur(6px); }
+    .wrap{ max-width:1400px; margin:0 auto; padding:12px 16px; }
+    h1{ margin:0; font-size:22px }
+    .row{ display:grid; gap:10px; grid-template-columns:1fr; margin-top:10px }
+    @media (min-width:640px){ .row{ grid-template-columns:1fr 1fr } }
+    select,input{ width:100%; background:#0b1222; color:var(--text); border:1px solid var(--border);
+      border-radius:12px; padding:10px 12px; font-size:16px }
+    .panel{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; }
+    .muted{ color:var(--sub); font-size:14px }
+    svg text{ font-family:inherit }
+    .legend span{ display:inline-block; width:14px; height:3px; margin-right:8px; vertical-align:middle; border-radius:2px }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Gov → Policy → Public Co. (Upside-Down Triangle)</h1>
+      <div class="row">
+        <input id="search" placeholder="Search (members, artifacts, companies)…" />
+        <select id="branch">
+          <option value="">All branches</option>
+          <option value="legislative">Legislative</option>
+          <option value="executive">Executive</option>
+          <option value="judicial">Judicial</option>
+        </select>
+      </div>
+    </div>
+  </header>
 
-  <!-- Canvas row -->
-  <section class="panel" style="overflow:hidden">
-    <svg id="canvas" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet" style="width:100%;height:60vh">
-      <!-- Columns guides -->
-      <g id="cols" fill="none" stroke="rgba(255,255,255,.06)">
-        <line x1="140" y1="0" x2="140" y2="600"/>
-        <line x1="500" y1="0" x2="500" y2="600"/>
-        <line x1="900" y1="0" x2="900" y2="600"/>
-      </g>
-
-      <!-- Column labels -->
-      <g font-size="14" fill="#94a3b8">
-        <text x="60"  y="30">Branches</text>
-        <text x="520" y="30">Policies / Laws / Rulings</text>
-        <text x="940" y="30">Public Companies</text>
-      </g>
-
-      <!-- Branch “buildings” -->
-      <g id="branches">
-        <!-- Capitol -->
-        <g class="node branch" data-branch="legislative" transform="translate(60,70)">
-          <rect width="160" height="70" rx="10" fill="#0b1222" stroke="#334155"/>
-          <text x="80" y="42" text-anchor="middle" fill="#e5e7eb" font-weight="600">Capitol</text>
-          <text x="80" y="60" text-anchor="middle" fill="#94a3b8" font-size="12">Legislative</text>
+  <main class="wrap" style="padding-top:12px">
+    <section class="panel" style="overflow:hidden">
+      <svg id="canvas" viewBox="0 0 1400 680" preserveAspectRatio="xMidYMid meet" style="width:100%;height:64vh">
+        <!-- Guides (faint) -->
+        <g fill="none" stroke="rgba(255,255,255,.06)">
+          <line x1="260" y1="0" x2="260" y2="680"/>   <!-- members column center -->
+          <line x1="1140" y1="0" x2="1140" y2="680"/> <!-- companies column center -->
+          <line x1="700" y1="0" x2="700" y2="680"/>   <!-- vertical mid (policies base) -->
+          <line x1="0" y1="560" x2="1400" y2="560"/>  <!-- policies baseline -->
         </g>
-        <!-- White House -->
-        <g class="node branch" data-branch="executive" transform="translate(60,170)">
-          <rect width="160" height="70" rx="10" fill="#0b1222" stroke="#334155"/>
-          <text x="80" y="42" text-anchor="middle" fill="#e5e7eb" font-weight="600">White House</text>
-          <text x="80" y="60" text-anchor="middle" fill="#94a3b8" font-size="12">Executive</text>
+
+        <!-- Labels -->
+        <g font-size="14" fill="#94a3b8">
+          <text x="90"  y="30">Branches & Members</text>
+          <text x="1200" y="30">Public Companies</text>
+          <text x="650" y="650">Policies / Laws / Rulings</text>
         </g>
-        <!-- Supreme Court -->
-        <g class="node branch" data-branch="judicial" transform="translate(60,270)">
-          <rect width="160" height="70" rx="10" fill="#0b1222" stroke="#334155"/>
-          <text x="80" y="42" text-anchor="middle" fill="#e5e7eb" font-weight="600">Supreme Court</text>
-          <text x="80" y="60" text-anchor="middle" fill="#94a3b8" font-size="12">Judicial</text>
+
+        <!-- Branch “buildings” on the left -->
+        <g id="branches">
+          <g class="node branch" data-branch="legislative" transform="translate(50,70)">
+            <rect width="220" height="64" rx="10" fill="#0b1222" stroke="#334155"></rect>
+            <text x="110" y="38" text-anchor="middle" fill="#e5e7eb" font-weight="600">Capitol</text>
+            <text x="110" y="54" text-anchor="middle" fill="#94a3b8" font-size="12">Legislative</text>
+          </g>
+          <g class="node branch" data-branch="executive" transform="translate(50,160)">
+            <rect width="220" height="64" rx="10" fill="#0b1222" stroke="#334155"></rect>
+            <text x="110" y="38" text-anchor="middle" fill="#e5e7eb" font-weight="600">White House</text>
+            <text x="110" y="54" text-anchor="middle" fill="#94a3b8" font-size="12">Executive</text>
+          </g>
+          <g class="node branch" data-branch="judicial" transform="translate(50,250)">
+            <rect width="220" height="64" rx="10" fill="#0b1222" stroke="#334155"></rect>
+            <text x="110" y="38" text-anchor="middle" fill="#e5e7eb" font-weight="600">Supreme Court</text>
+            <text x="110" y="54" text-anchor="middle" fill="#94a3b8" font-size="12">Judicial</text>
+          </g>
         </g>
-      </g>
 
-      <!-- Artifact cards (auto-laid out) -->
-      <g id="artifacts"></g>
+        <!-- Dynamic layers -->
+        <g id="members"></g>    <!-- top-left cluster under branches -->
+        <g id="artifacts"></g>  <!-- bottom center baseline -->
+        <g id="companies"></g>  <!-- right column -->
+        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".65"></g> <!-- member→artifact (amber) -->
+        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".55"></g> <!-- artifact→company (blue) -->
+        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".55"></g> <!-- member→company (red) -->
+      </svg>
 
-      <!-- Company cards (auto-laid out) -->
-      <g id="companies"></g>
+      <div class="muted legend" style="margin-top:10px">
+        <span style="background:#f59e0b"></span> Member → Policy/Law/Ruling
+        &nbsp;&nbsp; <span style="background:#3b82f6"></span> Policy/Law/Ruling → Company
+        &nbsp;&nbsp; <span style="background:#ef4444"></span> Member → Company
+      </div>
+    </section>
+  </main>
 
-      <!-- Edges -->
-      <g id="edges" fill="none" stroke="#3b82f6" stroke-opacity=".5"></g>
-    </svg>
-  </section>
-</main>
+  <script>
+    const S = { data:null, branch:'', q:'' };
 
-<script>
-(async function(){
-  const data = await fetch('data.json').then(r=>r.json());
+    const TYPE_BRANCH = {
+      bill:'legislative', law:'legislative', resolution:'legislative',
+      executive_order:'executive', rule:'executive',
+      opinion:'judicial', ruling:'judicial'
+    };
 
-  // Basic vertical layout helpers
-  const artX = 520, artY0 = 80, artDy = 90;
-  const coX  = 940, coY0  = 80, coDy  = 70;
+    // Layout constants (triangle)
+    const memX = 300, memY0 = 90, memDy = 46;             // members (left)
+    const coX  = 1140, coY0 = 90, coDy = 56;               // companies (right)
+    const baseY = 560, baseLeft = 420, baseRight = 980;    // artifacts baseline (bottom)
 
-  // Index artifacts/companies for positions
-  const art = data.artifacts.map((a,i)=>({ ...a, x: artX, y: artY0 + i*artDy }));
-  const cos = data.companies.map((c,i)=>({ ...c, x: coX,  y: coY0  + i*coDy  }));
+    const $ = id => document.getElementById(id);
+    const curve = (x1,y1,x2,y2)=>{ const mx=(x1+x2)/2; return `M${x1},${y1} C ${mx},${y1} ${mx},${y2} ${x2},${y2}`; };
 
-  const A = Object.fromEntries(art.map(a=>[a.id,a]));
-  const C = Object.fromEntries(cos.map(c=>[c.id,c]));
+    function computeFiltered() {
+      const q = (S.q||'').toLowerCase();
 
-  // Render artifacts
-  const gA = document.getElementById('artifacts');
-  gA.innerHTML = art.map(a => `
-    <g class="node artifact" data-id="${a.id}" transform="translate(${a.x-160},${a.y-28})">
-      <rect width="320" height="56" rx="10" fill="#0b1222" stroke="#334155"></rect>
-      <text x="12" y="24" fill="#e5e7eb" font-weight="600">${a.short_title || a.title}</text>
-      <text x="12" y="40" fill="#94a3b8" font-size="12">${a.type} • ${a.status || ''}</text>
-    </g>
-  `).join('');
+      // members by branch + search
+      const members = S.data.members.filter(m =>
+        (!S.branch || m.branch === S.branch) &&
+        (!q || (m.name + ' ' + (m.role||'')).toLowerCase().includes(q))
+      );
 
-  // Render companies
-  const gC = document.getElementById('companies');
-  gC.innerHTML = cos.map(c => `
-    <g class="node company" data-id="${c.id}" transform="translate(${c.x-160},${c.y-22})">
-      <rect width="320" height="44" rx="10" fill="#0b1222" stroke="#334155"></rect>
-      <text x="12" y="28" fill="#e5e7eb" font-weight="600">${c.name}${c.ticker?` (${c.ticker})`:''}</text>
-    </g>
-  `).join('');
+      // artifacts by branch (via type) + search
+      const artifacts = S.data.artifacts.filter(a =>
+        (!S.branch || TYPE_BRANCH[a.type] === S.branch) &&
+        (!q || (a.title + ' ' + (a.short_title||'') + ' ' + (a.type||'') + ' ' + (a.status||'')).toLowerCase().includes(q))
+      );
 
-  // Render edges (artifact→company)
-  const gE = document.getElementById('edges');
-  function curve(x1,y1,x2,y2){
-    const mx = (x1+x2)/2;
-    return `M${x1},${y1} C ${mx},${y1} ${mx},${y2} ${x2},${y2}`;
-  }
-  gE.innerHTML = data.edges.artifact_company.map(e=>{
-    const a=A[e.from], c=C[e.to]; if(!a||!c) return '';
-    return `<path d="${curve(a.x+0, a.y, c.x-160, c.y)}" stroke-width="2" />`;
-  }).join('');
+      const midxA = new Set(artifacts.map(a=>a.id));
+      const midxM = new Set(members.map(m=>m.id));
 
-  // Hover highlight (design demo)
-  const svg = document.getElementById('canvas');
-  svg.addEventListener('mouseover', e=>{
-    const n = e.target.closest('.node'); if(!n) return;
-    svg.style.setProperty('--fade','.2');
-    document.querySelectorAll('#edges path').forEach(p=>p.style.opacity=.15);
-  });
-  svg.addEventListener('mouseout', e=>{
-    svg.style.removeProperty('--fade');
-    document.querySelectorAll('#edges path').forEach(p=>p.style.opacity=.5);
-  });
+      // edges limited to visible nodes
+      const ma = (S.data.edges.member_artifact || []).filter(e => midxM.has(e.from) && midxA.has(e.to));
+      const ac = (S.data.edges.artifact_company || []).filter(e => midxA.has(e.from));
+      const mc = (S.data.edges.member_company || []).filter(e => midxM.has(e.from));
 
-  // Click trace: click an artifact to thicken its edges
-  svg.addEventListener('click', e=>{
-    const artNode = e.target.closest('.artifact');
-    if(!artNode) return;
-    const id = artNode.getAttribute('data-id');
-    document.querySelectorAll('#edges path').forEach(p=>p.setAttribute('stroke-width','2'));
-    data.edges.artifact_company.forEach((edge, i)=>{
-      if(edge.from === id){
-        const path = gE.children[i];
-        if(path) path.setAttribute('stroke-width','4');
-      }
+      // companies that appear in either ac or mc
+      const cSet = new Set([...ac.map(e=>e.to), ...mc.map(e=>e.to)]);
+      const companies = S.data.companies.filter(c => cSet.has(c.id) && (!q || (c.name + ' ' + (c.ticker||'')).toLowerCase().includes(q)));
+
+      return { members, artifacts, companies, ma, ac, mc };
+    }
+
+    function render() {
+      const { members, artifacts, companies, ma, ac, mc } = computeFiltered();
+
+      // ---- position members (grouped by branch blocks) ----
+      const byBranch = { legislative:[], executive:[], judicial:[] };
+      members.forEach(m => byBranch[m.branch]?.push(m));
+
+      const starts = { legislative: memY0, executive: memY0 + 120, judicial: memY0 + 240 };
+      Object.keys(byBranch).forEach(br => {
+        byBranch[br].forEach((m,i)=>{ m._x = memX; m._y = (starts[br]||memY0) + i*memDy; });
+      });
+
+      const M = Object.fromEntries(members.map(m=>[m.id,m]));
+
+      // draw members
+      $('members').innerHTML = members.map(m => `
+        <g class="node member" data-id="${m.id}" transform="translate(${m._x-160},${m._y-18})">
+          <rect width="320" height="36" rx="9" fill="#0b1222" stroke="#334155"></rect>
+          <text x="12" y="24" fill="#e5e7eb" font-weight="600">${m.name}</text>
+          <text x="308" y="24" text-anchor="end" fill="#94a3b8" font-size="12">${m.branch}</text>
+        </g>
+      `).join('');
+
+      // ---- position artifacts along bottom baseline (horizontal) ----
+      const nA = Math.max(artifacts.length, 1);
+      const span = Math.max(baseRight - baseLeft, 200);
+      const dx = nA === 1 ? 0 : span / (nA - 1);
+
+      artifacts.forEach((a,i)=>{ a._x = baseLeft + i*dx; a._y = baseY; });
+
+      const A = Object.fromEntries(artifacts.map(a=>[a.id,a]));
+
+      $('artifacts').innerHTML = artifacts.map(a => `
+        <g class="node artifact" data-id="${a.id}" transform="translate(${a._x-180},${a._y-28})">
+          <rect width="360" height="56" rx="10" fill="#0b1222" stroke="#334155"></rect>
+          <text x="12" y="24" fill="#e5e7eb" font-weight="600">${a.short_title || a.title}</text>
+          <text x="12" y="40" fill="#94a3b8" font-size="12">${a.type} • ${a.status || ''}</text>
+        </g>
+      `).join('');
+
+      // ---- position companies on right (vertical stack) ----
+      companies.forEach((c,i)=>{ c._x = coX; c._y = coY0 + i*coDy; });
+      const C = Object.fromEntries(companies.map(c=>[c.id,c]));
+
+      $('companies').innerHTML = companies.map(c => `
+        <g class="node company" data-id="${c.id}" transform="translate(${c._x-180},${c._y-22})">
+          <rect width="360" height="44" rx="10" fill="#0b1222" stroke="#334155"></rect>
+          <text x="12" y="28" fill="#e5e7eb" font-weight="600">${c.name}${c.ticker?` (${c.ticker})`:''}</text>
+        </g>
+      `).join('');
+
+      // ---- edges: member→artifact (amber) ----
+      $('edges-ma').innerHTML = ma.map(e=>{
+        const m=M[e.from], a=A[e.to]; if(!m||!a) return '';
+        return `<path d="${curve(m._x+20, m._y, a._x, a._y-28)}" stroke-width="2" />`;
+      }).join('');
+
+      // ---- edges: artifact→company (blue) ----
+      $('edges-ac').innerHTML = ac.map(e=>{
+        const a=A[e.from], c=C[e.to]; if(!a||!c) return '';
+        return `<path d="${curve(a._x, a._y-28, c._x-180, c._y)}" stroke-width="2" />`;
+      }).join('');
+
+      // ---- edges: member→company (red) ----
+      $('edges-mc').innerHTML = mc.map(e=>{
+        const m=M[e.from], c=C[e.to]; if(!m||!c) return '';
+        return `<path d="${curve(m._x+20, m._y, c._x-180, c._y)}" stroke-width="2" />`;
+      }).join('');
+    }
+
+    // interactions
+    const on = (id, ev, fn) => $(id).addEventListener(ev, fn);
+    on('branch','change', e => { S.branch = e.target.value; render(); });
+    on('search','input',  e => { S.q = e.target.value; render(); });
+
+    // click to emphasize an artifact’s outgoing edges
+    $('canvas').addEventListener('click', e=>{
+      const aNode = e.target.closest('.artifact'); if(!aNode) return;
+      const id = aNode.getAttribute('data-id');
+      const { artifacts, ac } = computeFiltered();
+      const idx = Object.fromEntries(ac.map((edge,i)=>[edge.from, (idx=>(idx.push(i), idx))(Object.create([]))]).flat?.() || []);
+      Array.from($('edges-ac').children).forEach(p=>p.setAttribute('stroke-width','2'));
+      ac.forEach((edge,i)=>{ if(edge.from===id) $('edges-ac').children[i]?.setAttribute('stroke-width','4'); });
     });
-  });
-})();
-</script>
+
+    // boot
+    fetch('data.json').then(r=>r.json()).then(d => { S.data = d; render(); })
+      .catch(err => { console.error(err); document.body.insertAdjacentHTML('beforeend','<div class="wrap"><div class="panel">Failed to load data.json</div></div>'); });
+  </script>
+</body>
+</html>
