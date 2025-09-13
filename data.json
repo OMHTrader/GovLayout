@@ -1,49 +1,27 @@
 {
   "members": [
-    {"id":"A000360","name":"Jane Doe","chamber":"house","state":"NY","party":"R","role":"Chair, Appropriations"},
-    {"id":"B000777","name":"John Smith","chamber":"senate","state":"TX","party":"D","role":"Ranking Member"}
+    { "id":"A000360", "name":"Jane Doe", "branch":"legislative", "chamber":"house", "state":"NY", "party":"R", "role":"Chair, Appropriations" },
+    { "id":"E-001",   "name":"Alex Taylor", "branch":"executive", "role":"Secretary of Commerce" },
+    { "id":"J-001",   "name":"Pat Morgan", "branch":"judicial", "role":"Associate Justice" }
   ],
-  "policies": [
-    {
-      "uid": "118_hr_1234",
-      "title": "Big Beautiful Bill (example)",
-      "short_title": "BBB — Golden Dome",
-      "status": "enacted",
-      "tags": ["infrastructure","semiconductors"],
-      "impacts_total": 5
-    },
-    {
-      "uid": "118_s_0042",
-      "title": "Strategic Industrial Expansion Act",
-      "short_title": "SIEA",
-      "status": "introduced",
-      "tags": ["defense"],
-      "impacts_total": 1
-    }
+  "artifacts": [
+    { "id":"118_hr_1234", "type":"law", "title":"Big Beautiful Bill", "short_title":"BBB — Golden Dome", "status":"enacted", "date":"2025-03-20", "tags":["infrastructure","semiconductors"] },
+    { "id":"EO_14099", "type":"executive_order", "title":"Strengthening Domestic Manufacturing", "status":"issued", "date":"2025-04-05" },
+    { "id":"SCOTUS_24_101", "type":"opinion", "title":"Omega Robotics v. U.S.", "status":"decided", "date":"2025-06-01" }
   ],
-  "impacts": [
-    {
-      "id": "imp-1",
-      "policy_uid": "118_hr_1234",
-      "link_type": "award",
-      "confidence": 0.86,
-      "company": {"name": "ACME SEMI CORP", "ticker": "ACME"},
-      "via_award": {"amount": 1250000000, "award_type": "grant", "awarding_agency": "Dept. of Commerce"}
-    },
-    {
-      "id": "imp-2",
-      "policy_uid": "118_hr_1234",
-      "link_type": "program",
-      "confidence": 0.74,
-      "company": {"name": "OMEGA ROBOTICS INC", "ticker": "OMRB"}
-    },
-    {
-      "id": "imp-3",
-      "policy_uid": "118_s_0042",
-      "link_type": "contract",
-      "confidence": 0.62,
-      "company": {"name": "POLAR MATERIALS CO", "ticker": "PMAT"},
-      "via_award": {"amount": 28000000, "award_type": "contract", "awarding_agency": "DoD"}
-    }
-  ]
+  "companies": [
+    { "id":"c-ACME", "name":"ACME SEMI CORP", "ticker":"ACME", "sector":"Semis" },
+    { "id":"c-OMRB", "name":"OMEGA ROBOTICS INC", "ticker":"OMRB", "sector":"Aerospace" }
+  ],
+  "edges": {
+    "member_artifact": [
+      { "from":"A000360", "to":"118_hr_1234", "relation":"sponsor" },
+      { "from":"E-001",   "to":"EO_14099",    "relation":"issued" },
+      { "from":"J-001",   "to":"SCOTUS_24_101","relation":"joined" }
+    ],
+    "artifact_company": [
+      { "from":"118_hr_1234", "to":"c-ACME", "via":"grant", "amount":1250000000, "agency":"Commerce" },
+      { "from":"EO_14099",    "to":"c-OMRB", "via":"rulemaking" }
+    ]
+  }
 }
