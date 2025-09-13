@@ -2,32 +2,31 @@
   "members": [
     { "id": "L-001", "name": "Jane Doe", "branch": "legislative", "party": "R", "state": "NY", "role": "Chair, Appropriations" },
     { "id": "E-001", "name": "Sander Gerber", "branch": "executive", "party": "I", "state": "DC", "role": "Member, Intelligence Advisory Board" },
-    { "id": "J-001", "name": "Pat Morgan", "branch": "judicial", "party": "",  "state": "US", "role": "Associate Justice" }
+    { "id": "J-001", "name": "Pat Morgan", "branch": "judicial", "party": "", "state": "US", "role": "Associate Justice" }
   ],
   "artifacts": [
-    { "id": "118_hr_1234",   "type": "law",             "title": "Big Beautiful Bill", "short_title": "BBB — Golden Dome", "status": "enacted", "date": "2025-03-20", "tags": ["surveillance","missile defense","ISR"] },
-    { "id": "EO_14099",      "type": "executive_order", "title": "Strengthening Domestic Manufacturing", "status": "issued", "date": "2025-04-05" },
-    { "id": "SCOTUS_24_101", "type": "opinion",         "title": "Omega Robotics v. United States",     "status": "decided", "date": "2025-06-01" }
+    { "id": "118_hr_1234", "type": "law", "title": "Big Beautiful Bill", "short_title": "BBB — Golden Dome", "status": "enacted", "date": "2025-03-20", "tags": ["surveillance", "missile defense", "ISR"] },
+    { "id": "EO_14099", "type": "executive_order", "title": "Strengthening Domestic Manufacturing", "status": "issued", "date": "2025-04-05" },
+    { "id": "SCOTUS_24_101", "type": "opinion", "title": "Omega Robotics v. United States", "status": "decided", "date": "2025-06-01" }
   ],
   "companies": [
-    { "id": "c-ACME", "name": "ACME SEMI CORP",       "ticker": "ACME", "sector": "Semiconductors" },
-    { "id": "c-OMRB", "name": "OMEGA ROBOTICS INC",   "ticker": "OMRB", "sector": "Aerospace" },
-    { "id": "c-RDW",  "name": "Redwire Corporation",  "ticker": "RDW",  "sector": "Space" }
+    { "id": "c-ACME", "name": "ACME SEMI CORP", "ticker": "ACME", "sector": "Semiconductors" },
+    { "id": "c-OMRB", "name": "OMEGA ROBOTICS INC", "ticker": "OMRB", "sector": "Aerospace" },
+    { "id": "c-RDW", "name": "Redwire Corporation", "ticker": "RDW", "sector": "Space" }
   ],
   "edges": {
     "member_artifact": [
       { "from": "L-001", "to": "118_hr_1234", "relation": "sponsor", "note": "Appropriations sponsor" },
-      { "from": "E-001", "to": "EO_14099",    "relation": "advises", "note": "Advisory input on EO scope" }
+      { "from": "E-001", "to": "EO_14099", "relation": "advises", "note": "Advisory input on EO scope" }
     ],
     "artifact_company": [
-      { "from": "118_hr_1234", "to": "c-ACME", "via": "grant",       "amount": 1250000000, "agency": "Commerce", "note": "Golden Dome grant" },
-      { "from": "EO_14099",    "to": "c-OMRB", "via": "rulemaking",  "note": "Eligibility expanded" }
+      { "from": "118_hr_1234", "to": "c-ACME", "via": "grant", "amount": 1250000000, "agency": "Commerce", "note": "Golden Dome grant" },
+      { "from": "EO_14099", "to": "c-OMRB", "via": "rulemaking", "note": "Eligibility expanded" }
     ],
     "member_company": [
       { "from": "E-001", "to": "c-RDW", "relation": "ownership", "note": "Hedge fund holdings of ~131,252 shares (example)" }
     ]
   },
-
   "prices": {
     "c-RDW": [
       { "date": "2025-01-02", "close": 5.10 },
@@ -45,7 +44,6 @@
       { "date": "2025-09-12", "close": 6.65 }
     ]
   },
-
   "timelines": {
     "c-RDW": [
       {
