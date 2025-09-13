@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gov → Policy → Public Co. (Triangle)</title>
+  <title>Gov → Policy → Public Co. (Triangle — One-by-one)</title>
   <style>
     :root{ --bg:#0f172a; --panel:#0b1222; --text:#e5e7eb; --sub:#94a3b8; --border:#334155; }
     *{ box-sizing:border-box }
@@ -14,55 +14,82 @@
     header{ position:sticky; top:0; background:#0f172ad0; border-bottom:1px solid var(--border); backdrop-filter:saturate(1.05) blur(6px); }
     .wrap{ max-width:1400px; margin:0 auto; padding:12px 16px; }
     h1{ margin:0; font-size:22px }
-    input{
-      width:100%; background:#0b1222; color:var(--text); border:1px solid var(--border);
-      border-radius:12px; padding:10px 12px; font-size:16px; margin-top:10px;
+    .controls{ display:grid; gap:10px; grid-template-columns:1fr; margin-top:10px }
+    @media (min-width:700px){ .controls{ grid-template-columns:1fr 1fr 1fr } }
+    input, select, button{
+      background:#0b1222; color:var(--text); border:1px solid var(--border);
+      border-radius:12px; padding:10px 12px; font-size:16px;
     }
+    button:disabled{ opacity:.5; cursor:not-allowed }
     .panel{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; }
     .muted{ color:var(--sub); font-size:14px }
     svg text{ font-family:inherit }
     .legend span{ display:inline-block; width:14px; height:3px; margin-right:8px; vertical-align:middle; border-radius:2px }
+    .bar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0 0 }
+    .pill{ padding:4px 10px; border:1px solid var(--border); border-radius:999px; background:#0f172a; font-size:12px; color:var(--sub) }
+    .idx{ font-size:13px; color:var(--sub); min-width:56px; text-align:center }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap">
       <h1>Gov → Policy → Public Co. (Upside-Down Triangle)</h1>
-      <input id="search" placeholder="Search (ticker › member › policy)…" />
+      <div class="controls">
+        <input id="searchTicker" placeholder="Search by ticker (e.g., ACME, OMRB, RDW)…" />
+        <select id="tickerSelect">
+          <option value="">Select a ticker…</option>
+        </select>
+        <button id="clearSel">Clear selection</button>
+      </div>
     </div>
   </header>
 
   <main class="wrap" style="padding-top:12px">
     <section class="panel" style="overflow:hidden">
-      <svg id="canvas" viewBox="0 0 1400 700" preserveAspectRatio="xMidYMid meet" style="width:100%;height:66vh">
-        <!-- Faint guides -->
+      <svg id="canvas" viewBox="0 0 1400 720" preserveAspectRatio="xMidYMid meet" style="width:100%;height:66vh">
+        <!-- guides -->
         <g fill="none" stroke="rgba(255,255,255,.06)">
-          <line x1="300" y1="0" x2="300" y2="700"/>   <!-- members column -->
-          <line x1="700" y1="0" x2="700" y2="700"/>   <!-- center -->
-          <line x1="1140" y1="0" x2="1140" y2="700"/> <!-- companies column -->
-          <line x1="360" y1="600" x2="1040" y2="600"/> <!-- policies baseline -->
+          <line x1="300" y1="0" x2="300" y2="720"/>   <!-- member column -->
+          <line x1="700" y1="0" x2="700" y2="720"/>   <!-- center -->
+          <line x1="1140" y1="0" x2="1140" y2="720"/> <!-- company column -->
+          <line x1="420" y1="620" x2="980" y2="620"/> <!-- policy baseline -->
         </g>
 
-        <!-- Labels -->
+        <!-- labels -->
         <g font-size="14" fill="#94a3b8">
-          <text x="110"  y="30">Branches & Members</text>
-          <text x="1210" y="30">Public Companies</text>
-          <text x="640"  y="680">Policies / Laws / Rulings</text>
+          <text x="150"  y="32">Members</text>
+          <text x="1190" y="32">Public Companies</text>
+          <text x="650"  y="702">Policies / Laws / Rulings</text>
         </g>
 
-        <!-- Edges behind nodes -->
-        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".85"></g> <!-- member→artifact (amber) -->
-        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".85"></g> <!-- artifact→company (blue) -->
-        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".85"></g> <!-- member→company (red) -->
+        <!-- edges (behind) -->
+        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".9"></g> <!-- member→artifact (amber) -->
+        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".9"></g> <!-- artifact→company (blue) -->
+        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".9"></g> <!-- member→company (red) -->
 
-        <!-- Nodes -->
-        <g id="members"></g>    <!-- left -->
-        <g id="artifacts"></g>  <!-- bottom baseline -->
-        <g id="companies"></g>  <!-- right -->
+        <!-- nodes -->
+        <g id="member"></g>    <!-- single member -->
+        <g id="artifact"></g>  <!-- single policy -->
+        <g id="company"></g>   <!-- single company -->
 
-        <!-- Edge labels on top (so line appears “through” translucent box) -->
+        <!-- labels (on top) -->
         <g id="labels"></g>
       </svg>
+
+      <!-- selection bars -->
+      <div class="bar" id="memberBar">
+        <button id="prevM">◀ Prev member</button>
+        <span class="idx" id="mIdx">0/0</span>
+        <button id="nextM">Next member ▶</button>
+        <span class="pill" id="mName">—</span>
+      </div>
+
+      <div class="bar" id="artifactBar">
+        <button id="prevA">◀ Prev policy</button>
+        <span class="idx" id="aIdx">0/0</span>
+        <button id="nextA">Next policy ▶</button>
+        <span class="pill" id="aName">—</span>
+      </div>
 
       <div class="muted legend" style="margin-top:10px">
         <span style="background:#f59e0b"></span> Member → Policy/Law/Ruling
@@ -73,97 +100,64 @@
   </main>
 
   <script>
-    // ---- layout ----
-    const memX = 300, memY0 = 120, memGapBranch = 120, memDy = 48; // left column
-    const coX  = 1140, coY0 = 120, coDy = 60;                       // right column
-    const baseY = 600, baseLeft = 380, baseRight = 1020;            // bottom baseline for policies
+    // layout constants
+    const memX = 300, memY = 260;              // single member position
+    const coX  = 1140, coY  = 260;             // single company position
+    const polY = 620, polX  = (420 + 980) / 2; // single policy centered on baseline
 
     const $ = id => document.getElementById(id);
     const NS = "http://www.w3.org/2000/svg";
 
-    const S = { data:null, q:"" };
+    const S = {
+      data: null,
+      activeCompanyId: "",
+      membersForCompany: [],  // unique list (direct ties + via policies)
+      artifactsForCompany: [],// all policies tied to company
+      iM: 0, iA: 0
+    };
 
-    // search priority: ticker > member > policy
-    function computeFiltered(){
-      const q = (S.q||"").trim().toLowerCase();
-      const all = S.data;
+    function uniqBy(arr, keyFn){
+      const seen = new Set(); const out=[];
+      for(const x of arr){ const k=keyFn(x); if(!seen.has(k)){ seen.add(k); out.push(x); } }
+      return out;
+    }
 
-      if(!q){
-        return {
-          members: all.members.slice(),
-          artifacts: all.artifacts.slice(),
-          companies: all.companies.slice(),
-          ma: all.edges.member_artifact.slice(),
-          ac: all.edges.artifact_company.slice(),
-          mc: all.edges.member_company ? all.edges.member_company.slice() : []
-        };
-      }
+    function hydrateForCompany(cid){
+      const { members, artifacts, companies, edges } = S.data;
+      const comp = companies.find(c=>c.id===cid);
+      if(!comp) return { comp:null, mList:[], aList:[], ma:[], ac:[], mc:[] };
 
-      // 1) company by ticker (then name)
-      const cTicker = all.companies.filter(c =>
-        (c.ticker && c.ticker.toLowerCase().includes(q)) ||
-        (c.name && c.name.toLowerCase().includes(q))
-      );
-      if(cTicker.length){
-        const cSet = new Set(cTicker.map(c=>c.id));
-        const ac = all.edges.artifact_company.filter(e=>cSet.has(e.to));
-        const mc = (all.edges.member_company||[]).filter(e=>cSet.has(e.to));
-        const aSet = new Set(ac.map(e=>e.from));
-        const mSet = new Set(mc.map(e=>e.from));
-        return {
-          companies: all.companies.filter(c=>cSet.has(c.id)),
-          artifacts: all.artifacts.filter(a=>aSet.has(a.id)),
-          members:  all.members.filter(m=>mSet.has(m.id)),
-          ma: all.edges.member_artifact.filter(e=>mSet.has(e.from) && aSet.has(e.to)),
-          ac, mc
-        };
-      }
+      // policies linked to company
+      const acEdges = (edges.artifact_company||[]).filter(e=>e.to===cid);
+      const aIds = new Set(acEdges.map(e=>e.from));
+      const aList = artifacts.filter(a=>aIds.has(a.id));
 
-      // 2) members by name/role/party/state
-      const mHit = all.members.filter(m => (m.name + " " + (m.role||"") + " " + (m.party||"") + " " + (m.state||""))
-                               .toLowerCase().includes(q));
-      if(mHit.length){
-        const mSet = new Set(mHit.map(m=>m.id));
-        const ma = all.edges.member_artifact.filter(e=>mSet.has(e.from));
-        const mc = (all.edges.member_company||[]).filter(e=>mSet.has(e.from));
-        const aSet = new Set(ma.map(e=>e.to));
-        const cSet = new Set(mc.map(e=>e.to));
-        return {
-          members:  all.members.filter(m=>mSet.has(m.id)),
-          artifacts: all.artifacts.filter(a=>aSet.has(a.id)),
-          companies: all.companies.filter(c=>cSet.has(c.id)),
-          ma, mc,
-          ac: all.edges.artifact_company.filter(e=>aSet.has(e.from) && cSet.has(e.to))
-        };
-      }
+      // members with direct ties to company
+      const mcEdges = (edges.member_company||[]).filter(e=>e.to===cid);
+      const mDirectIds = new Set(mcEdges.map(e=>e.from));
 
-      // 3) policies by title/short_title
-      const aHit = all.artifacts.filter(a => (a.title + " " + (a.short_title||"")).toLowerCase().includes(q));
-      if(aHit.length){
-        const aSet = new Set(aHit.map(a=>a.id));
-        const ma = all.edges.member_artifact.filter(e=>aSet.has(e.to));
-        const ac = all.edges.artifact_company.filter(e=>aSet.has(e.from));
-        const mSet = new Set(ma.map(e=>e.from));
-        const cSet = new Set(ac.map(e=>e.to));
-        return {
-          artifacts: all.artifacts.filter(a=>aSet.has(a.id)),
-          members:   all.members.filter(m=>mSet.has(m.id)),
-          companies: all.companies.filter(c=>cSet.has(c.id)),
-          ma, ac,
-          mc: (all.edges.member_company||[]).filter(e=>mSet.has(e.from) && cSet.has(e.to))
-        };
-      }
+      // members tied via those policies
+      const maEdgesAll = (edges.member_artifact||[]).filter(e=>aIds.has(e.to));
+      const mViaIds = new Set(maEdgesAll.map(e=>e.from));
 
-      return { members:[], artifacts:[], companies:[], ma:[], ac:[], mc:[] };
+      const mIds = new Set([...mDirectIds, ...mViaIds]);
+      const mList = members.filter(m=>mIds.has(m.id));
+
+      // keep only edges among selected
+      const ma = (edges.member_artifact||[]).filter(e=>mIds.has(e.from) && aIds.has(e.to));
+      const ac = acEdges.slice();
+      const mc = (edges.member_company||[]).filter(e=>mIds.has(e.from) && e.to===cid);
+
+      return { comp, mList, aList, ma, ac, mc };
     }
 
     function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
 
-    function drawMember(g, m){
-      const node = document.createElementNS(NS, "g");
-      node.setAttribute("class","node member");
-      node.setAttribute("data-id", m.id);
-      node.setAttribute("transform", `translate(${m._x-170},${m._y-22})`);
+    function drawMember(m){
+      const g = $("member"); clear(g);
+      if(!m) return;
+      const node = document.createElementNS(NS,"g");
+      node.setAttribute("transform", `translate(${memX-170},${memY-22})`);
       const rect = document.createElementNS(NS,"rect");
       rect.setAttribute("width","340"); rect.setAttribute("height","44"); rect.setAttribute("rx","10");
       rect.setAttribute("fill","#0b1222"); rect.setAttribute("stroke","#334155");
@@ -178,11 +172,11 @@
       g.appendChild(node);
     }
 
-    function drawArtifact(g, a){
+    function drawArtifact(a){
+      const g = $("artifact"); clear(g);
+      if(!a) return;
       const node = document.createElementNS(NS,"g");
-      node.setAttribute("class","node artifact");
-      node.setAttribute("data-id", a.id);
-      node.setAttribute("transform", `translate(${a._x-180},${a._y-28})`);
+      node.setAttribute("transform", `translate(${polX-180},${polY-28})`);
       const rect = document.createElementNS(NS,"rect");
       rect.setAttribute("width","360"); rect.setAttribute("height","56"); rect.setAttribute("rx","10");
       rect.setAttribute("fill","#0b1222"); rect.setAttribute("stroke","#334155");
@@ -196,11 +190,11 @@
       g.appendChild(node);
     }
 
-    function drawCompany(g, c){
+    function drawCompany(c){
+      const g = $("company"); clear(g);
+      if(!c) return;
       const node = document.createElementNS(NS,"g");
-      node.setAttribute("class","node company");
-      node.setAttribute("data-id", c.id);
-      node.setAttribute("transform", `translate(${c._x-180},${c._y-22})`);
+      node.setAttribute("transform", `translate(${coX-180},${coY-22})`);
       const rect = document.createElementNS(NS,"rect");
       rect.setAttribute("width","360"); rect.setAttribute("height","44"); rect.setAttribute("rx","10");
       rect.setAttribute("fill","#0b1222"); rect.setAttribute("stroke","#334155");
@@ -211,7 +205,6 @@
       g.appendChild(node);
     }
 
-    // straight line + centered translucent label so the line shows “through”
     function drawEdgeWithLabel(gLine, gLabel, x1,y1,x2,y2, stroke, text){
       const line = document.createElementNS(NS,"line");
       line.setAttribute("x1",x1); line.setAttribute("y1",y1);
@@ -219,9 +212,10 @@
       line.setAttribute("stroke", stroke); line.setAttribute("stroke-width","2");
       gLine.appendChild(line);
 
+      // label box at midpoint
       const midx = (x1+x2)/2, midy = (y1+y2)/2;
-      const padX = 10, padY = 6;
-      const estW = Math.max(70, Math.min(280, (text||"").length * 7 + padX*2));
+      const padX = 10;
+      const estW = Math.max(70, Math.min(320, (text||"").length * 7 + padX*2));
       const estH = 24;
 
       const group = document.createElementNS(NS,"g");
@@ -242,67 +236,120 @@
     }
 
     function render(){
-      const { members, artifacts, companies, ma, ac, mc } = computeFiltered();
+      const edgesMA = $("edges-ma"), edgesAC = $("edges-ac"), edgesMC = $("edges-mc"), labels = $("labels");
+      clear(edgesMA); clear(edgesAC); clear(edgesMC); clear(labels);
 
-      // positions
-      const byBranch = { legislative:[], executive:[], judicial:[] };
-      members.forEach(m => (byBranch[m.branch]||byBranch.legislative).push(m));
-      const starts = { legislative: memY0, executive: memY0 + memGapBranch, judicial: memY0 + memGapBranch*2 };
-      Object.keys(byBranch).forEach(br => {
-        byBranch[br].forEach((m,i)=>{ m._x = memX; m._y = (starts[br]||memY0) + i*memDy; });
-      });
+      if(!S.activeCompanyId){
+        $("member").innerHTML = "";
+        $("artifact").innerHTML = "";
+        $("company").innerHTML = "";
+        $("mIdx").textContent = "0/0"; $("aIdx").textContent = "0/0";
+        $("mName").textContent = "—";  $("aName").textContent = "—";
+        $("prevM").disabled = $("nextM").disabled = $("prevA").disabled = $("nextA").disabled = true;
+        return;
+      }
 
-      const nA = Math.max(artifacts.length, 1);
-      const span = Math.max(baseRight - baseLeft, 200);
-      const dx = nA === 1 ? 0 : span / (nA - 1);
-      artifacts.forEach((a,i)=>{ a._x = baseLeft + i*dx; a._y = baseY; });
+      const { comp, mList, aList, ma, ac, mc } = hydrateForCompany(S.activeCompanyId);
+      S.membersForCompany  = uniqBy(mList, m => m.id);
+      S.artifactsForCompany = uniqBy(aList, a => a.id);
 
-      companies.forEach((c,i)=>{ c._x = coX; c._y = coY0 + i*coDy; });
+      // clamp indices
+      if(S.iM >= S.membersForCompany.length) S.iM = 0;
+      if(S.iA >= S.artifactsForCompany.length) S.iA = 0;
 
-      const M = Object.fromEntries(members.map(m=>[m.id,m]));
-      const A = Object.fromEntries(artifacts.map(a=>[a.id,a]));
-      const C = Object.fromEntries(companies.map(c=>[c.id,c]));
+      const curM = S.membersForCompany[S.iM] || null;
+      const curA = S.artifactsForCompany[S.iA] || null;
 
-      const gM=$('members'), gA=$('artifacts'), gC=$('companies'),
-            gMA=$('edges-ma'), gAC=$('edges-ac'), gMC=$('edges-mc'), gL=$('labels');
-      clear(gM); clear(gA); clear(gC); clear(gMA); clear(gAC); clear(gMC); clear(gL);
+      drawCompany(comp);
+      drawMember(curM);
+      drawArtifact(curA);
 
-      // nodes
-      members.forEach(m=>drawMember(gM,m));
-      artifacts.forEach(a=>drawArtifact(gA,a));
-      companies.forEach(c=>drawCompany(gC,c));
+      $("mIdx").textContent = `${S.membersForCompany.length?S.iM+1:0}/${S.membersForCompany.length}`;
+      $("aIdx").textContent = `${S.artifactsForCompany.length?S.iA+1:0}/${S.artifactsForCompany.length}`;
+      $("mName").textContent = curM ? `${curM.name}${curM.party||curM.state?` (${[curM.party, curM.state].filter(Boolean).join("–")})`:""}` : "—";
+      $("aName").textContent = curA ? (curA.short_title || curA.title) : "—";
 
-      // edges + labels
-      ma.forEach(e=>{
-        const m=M[e.from], a=A[e.to]; if(!m||!a) return;
-        const label = e.note || e.relation || "";
-        drawEdgeWithLabel(gMA, gL, m._x+20, m._y, a._x, a._y-30, "#f59e0b", label);
-      });
+      // map for quick lookup
+      const Midx = Object.fromEntries(S.data.members.map(m=>[m.id,m]));
+      const Aidx = Object.fromEntries(S.data.artifacts.map(a=>[a.id,a]));
 
-      ac.forEach(e=>{
-        const a=A[e.from], c=C[e.to]; if(!a||!c) return;
+      // draw selected edges only (one-by-one)
+      if(curM && curA){
+        const e = (ma||[]).find(e => e.from===curM.id && e.to===curA.id);
+        const label = e?.note || e?.relation || "";
+        drawEdgeWithLabel(edgesMA, labels, memX+20, memY, polX, polY-28, "#f59e0b", label);
+      }
+      if(curA){
+        const e = (ac||[]).find(e => e.from===curA.id && e.to===comp.id);
         const parts = [];
-        if(e.via) parts.push(e.via);
-        if(e.agency) parts.push(e.agency);
-        if(typeof e.amount==="number") parts.push("$"+e.amount.toLocaleString());
-        const label = e.note || parts.join(" • ");
-        drawEdgeWithLabel(gAC, gL, a._x, a._y-30, c._x-180, c._y, "#3b82f6", label);
-      });
+        if(e?.via) parts.push(e.via);
+        if(e?.agency) parts.push(e.agency);
+        if(typeof e?.amount==="number") parts.push("$"+e.amount.toLocaleString());
+        const label = e?.note || parts.join(" • ");
+        drawEdgeWithLabel(edgesAC, labels, polX, polY-28, coX-180, coY, "#3b82f6", label);
+      }
+      if(curM){
+        const e = (mc||[]).find(e => e.from===curM.id && e.to===comp.id);
+        const label = e?.note || e?.relation || "";
+        drawEdgeWithLabel(edgesMC, labels, memX+20, memY, coX-180, coY, "#ef4444", label);
+      }
 
-      (mc||[]).forEach(e=>{
-        const m=M[e.from], c=C[e.to]; if(!m||!c) return;
-        const label = e.note || e.relation || "";
-        drawEdgeWithLabel(gMC, gL, m._x+20, m._y, c._x-180, c._y, "#ef4444", label);
-      });
+      // enable/disable nav
+      $("prevM").disabled = $("nextM").disabled = S.membersForCompany.length<=1;
+      $("prevA").disabled = $("nextA").disabled = S.artifactsForCompany.length<=1;
     }
 
-    // events
-    document.getElementById('search').addEventListener('input', e => { S.q = e.target.value; render(); });
+    // ----- controls -----
+    function setCompanyById(cid){
+      S.activeCompanyId = cid || "";
+      S.iM = 0; S.iA = 0;
+      // sync dropdown & clear search text if exact match
+      const comp = S.data.companies.find(c=>c.id===cid);
+      $("tickerSelect").value = cid || "";
+      if(comp && $("searchTicker").value.toLowerCase() === (comp.ticker||"").toLowerCase()){
+        $("searchTicker").value = comp.ticker;
+      }
+      render();
+    }
+
+    $("prevM").addEventListener("click", () => { if(S.membersForCompany.length){ S.iM = (S.iM-1+S.membersForCompany.length)%S.membersForCompany.length; render(); } });
+    $("nextM").addEventListener("click", () => { if(S.membersForCompany.length){ S.iM = (S.iM+1)%S.membersForCompany.length; render(); } });
+    $("prevA").addEventListener("click", () => { if(S.artifactsForCompany.length){ S.iA = (S.iA-1+S.artifactsForCompany.length)%S.artifactsForCompany.length; render(); } });
+    $("nextA").addEventListener("click", () => { if(S.artifactsForCompany.length){ S.iA = (S.iA+1)%S.artifactsForCompany.length; render(); } });
+    $("clearSel").addEventListener("click", () => setCompanyById(""));
+
+    // search by ticker (press Enter for exact; or if unique match, auto-select)
+    $("searchTicker").addEventListener("input", (e)=>{
+      const q=e.target.value.trim().toLowerCase();
+      if(!q){ $("tickerSelect").value=""; setCompanyById(""); return; }
+      const matches = S.data.companies.filter(c =>
+        (c.ticker && c.ticker.toLowerCase().includes(q))
+      );
+      if(matches.length===1 && matches[0].ticker.toLowerCase()===q){
+        setCompanyById(matches[0].id);
+      }
+    });
+    $("searchTicker").addEventListener("keydown", (e)=>{
+      if(e.key==="Enter"){
+        const q=e.target.value.trim().toLowerCase();
+        const comp = S.data.companies.find(c=> (c.ticker||"").toLowerCase()===q);
+        if(comp){ setCompanyById(comp.id); }
+      }
+    });
+
+    $("tickerSelect").addEventListener("change", (e)=> setCompanyById(e.target.value));
 
     // boot
     fetch('./data.json')
       .then(r=>r.json())
-      .then(d => { S.data = d; render(); })
+      .then(d => {
+        S.data = d;
+        // fill dropdown
+        const sel = $("tickerSelect");
+        sel.innerHTML = `<option value="">Select a ticker…</option>` +
+          d.companies.map(c => `<option value="${c.id}">${(c.ticker||'—')} — ${c.name}</option>`).join('');
+        render();
+      })
       .catch(err => {
         console.error(err);
         document.body.insertAdjacentHTML('beforeend','<div class="wrap"><div class="panel">Failed to load ./data.json</div></div>');
