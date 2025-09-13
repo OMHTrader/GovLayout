@@ -1,56 +1,78 @@
 {
   "members": [
-    {
-      "id": "E-001",
-      "name": "Sander Gerber",
-      "branch": "executive",
-      "party": "I",
-      "state": "DC",
-      "role": "Advisor, Intelligence Advisory Board"
-    }
+    { "id": "L-001", "name": "Jane Doe", "branch": "legislative", "party": "R", "state": "NY", "role": "Chair, Appropriations" },
+    { "id": "E-001", "name": "Sander Gerber", "branch": "executive", "party": "I", "state": "DC", "role": "Member, Intelligence Advisory Board" },
+    { "id": "J-001", "name": "Pat Morgan", "branch": "judicial", "party": "",  "state": "US", "role": "Associate Justice" }
   ],
   "artifacts": [
-    {
-      "id": "118_hr_1234",
-      "type": "law",
-      "title": "Big Beautiful Bill",
-      "short_title": "BBB — Golden Dome",
-      "status": "enacted",
-      "date": "2025-03-20",
-      "tags": ["surveillance", "missile defense", "ISR"]
-    }
+    { "id": "118_hr_1234",   "type": "law",             "title": "Big Beautiful Bill", "short_title": "BBB — Golden Dome", "status": "enacted", "date": "2025-03-20", "tags": ["surveillance","missile defense","ISR"] },
+    { "id": "EO_14099",      "type": "executive_order", "title": "Strengthening Domestic Manufacturing", "status": "issued", "date": "2025-04-05" },
+    { "id": "SCOTUS_24_101", "type": "opinion",         "title": "Omega Robotics v. United States",     "status": "decided", "date": "2025-06-01" }
   ],
   "companies": [
-    {
-      "id": "c-RDW",
-      "name": "Redwire Corporation",
-      "ticker": "RDW",
-      "sector": "Space"
-    }
+    { "id": "c-ACME", "name": "ACME SEMI CORP",       "ticker": "ACME", "sector": "Semiconductors" },
+    { "id": "c-OMRB", "name": "OMEGA ROBOTICS INC",   "ticker": "OMRB", "sector": "Aerospace" },
+    { "id": "c-RDW",  "name": "Redwire Corporation",  "ticker": "RDW",  "sector": "Space" }
   ],
   "edges": {
     "member_artifact": [
-      {
-        "from": "E-001",
-        "to": "118_hr_1234",
-        "relation": "advises",
-        "note": "PIAB focus areas: drone surveillance, missile defense, intelligence/surveillance/reconnaissance (illustrative)"
-      }
+      { "from": "L-001", "to": "118_hr_1234", "relation": "sponsor", "note": "Appropriations sponsor" },
+      { "from": "E-001", "to": "EO_14099",    "relation": "advises", "note": "Advisory input on EO scope" }
     ],
     "artifact_company": [
-      {
-        "from": "118_hr_1234",
-        "to": "c-RDW",
-        "via": "grant/contract",
-        "note": "Golden Dome funds toward surveillance of missiles, anti-missile defense, and ISR capabilities (illustrative)"
-      }
+      { "from": "118_hr_1234", "to": "c-ACME", "via": "grant",       "amount": 1250000000, "agency": "Commerce", "note": "Golden Dome grant" },
+      { "from": "EO_14099",    "to": "c-OMRB", "via": "rulemaking",  "note": "Eligibility expanded" }
     ],
     "member_company": [
+      { "from": "E-001", "to": "c-RDW", "relation": "ownership", "note": "Hedge fund holdings of ~131,252 shares (user-provided example)" }
+    ]
+  },
+  "timelines": {
+    "c-RDW": [
       {
-        "from": "E-001",
-        "to": "c-RDW",
-        "relation": "ownership",
-        "note": "Hedge fund holdings of ~131,252 shares (example)"
+        "date": "2025-01-27",
+        "type": "policy_announcement",
+        "title": "“Golden Dome” initiative announced",
+        "note": "User-provided date for program announcement.",
+        "confidence": 0.7
+      },
+      {
+        "date": "2025-02-11",
+        "type": "policy_followup",
+        "title": "Follow-up brief/statement on Golden Dome scope",
+        "note": "User-provided milestone; details to be refined.",
+        "confidence": 0.6
+      },
+      {
+        "start": "2025-03-31",
+        "end": "2025-06-30",
+        "type": "13f_window",
+        "title": "Q2 2025 13F window",
+        "range_label": "Quarter window (Mar 31 – Jun 30)",
+        "note": "User-provided: Hudson Bay Capital buying shares during Q2.",
+        "confidence": 0.6
+      },
+      {
+        "date": "2025-07-15",
+        "type": "leadership",
+        "title": "Gen. Guetlein named DRPM for Golden Dome for America",
+        "note": "From provided bio text; date approximated to mid-July 2025.",
+        "confidence": 0.7,
+        "status": "approximate"
+      },
+      {
+        "type": "contact",
+        "title": "Direct contact: Guetlein ↔ RDW",
+        "note": "Unverified — add a source if/when confirmed.",
+        "status": "unverified",
+        "confidence": 0.2
+      },
+      {
+        "type": "allocation",
+        "title": "Potential Golden Dome funding to RDW",
+        "note": "Illustrative: surveillance of missiles, anti-missile defense, ISR payloads",
+        "status": "hypothesis",
+        "confidence": 0.4
       }
     ]
   }
