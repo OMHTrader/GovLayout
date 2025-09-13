@@ -11,7 +11,10 @@
       margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial;
       background:var(--bg); color:var(--text); font-size:18px; line-height:1.45;
     }
-    header{ position:sticky; top:0; background:#0f172ad0; border-bottom:1px solid var(--border); backdrop-filter:saturate(1.05) blur(6px); }
+    header{
+      position:sticky; top:0; z-index:1000;
+      background:#0f172ad0; border-bottom:1px solid var(--border); backdrop-filter:saturate(1.05) blur(6px);
+    }
     .wrap{ max-width:1400px; margin:0 auto; padding:12px 16px; }
     h1{ margin:0; font-size:22px }
     .controls{ display:grid; gap:10px; grid-template-columns:1fr; margin-top:10px }
@@ -24,7 +27,6 @@
     .panel{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; }
     .muted{ color:var(--sub); font-size:14px }
     svg text{ font-family:inherit }
-    .legend span{ display:inline-block; width:14px; height:3px; margin-right:8px; vertical-align:middle; border-radius:2px }
     .bar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0 0 }
     .pill{ padding:4px 10px; border:1px solid var(--border); border-radius:999px; background:#0f172a; font-size:12px; color:var(--sub) }
     .idx{ font-size:13px; color:var(--sub); min-width:56px; text-align:center }
@@ -35,11 +37,9 @@
     <div class="wrap">
       <h1>Gov → Policy → Public Co. (Upside-Down Triangle)</h1>
       <div class="controls">
-        <!-- SEARCH INPUT WITH DROPDOWN (datalist) -->
         <input id="searchTicker" list="tickersList" placeholder="Type a ticker (ACME, OMRB, RDW)…" />
         <datalist id="tickersList"></datalist>
 
-        <!-- EXPLICIT TICKER DROPDOWN -->
         <select id="tickerSelect">
           <option value="">Select a ticker…</option>
         </select>
@@ -47,6 +47,7 @@
         <button id="clearSel">Clear</button>
         <button id="openTimeline" disabled>Open timeline →</button>
       </div>
+      <div class="muted" id="hostHint" style="display:none;margin-top:6px"></div>
     </div>
   </header>
 
@@ -55,10 +56,10 @@
       <svg id="canvas" viewBox="0 0 1400 720" preserveAspectRatio="xMidYMid meet" style="width:100%;height:66vh">
         <!-- guides -->
         <g fill="none" stroke="rgba(255,255,255,.06)">
-          <line x1="300" y1="0" x2="300" y2="720"/>   <!-- member column -->
-          <line x1="700" y1="0" x2="700" y2="720"/>   <!-- center -->
-          <line x1="1140" y1="0" x2="1140" y2="720"/> <!-- company column -->
-          <line x1="420" y1="620" x2="980" y2="620"/> <!-- policy baseline -->
+          <line x1="300" y1="0" x2="300" y2="720"/>
+          <line x1="700" y1="0" x2="700" y2="720"/>
+          <line x1="1140" y1="0" x2="1140" y2="720"/>
+          <line x1="420" y1="620" x2="980" y2="620"/>
         </g>
 
         <!-- labels -->
@@ -68,12 +69,12 @@
           <text x="650"  y="702">Policies / Laws / Rulings</text>
         </g>
 
-        <!-- edges (behind) -->
-        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".95" stroke-linecap="round"></g> <!-- member→artifact -->
-        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".95" stroke-linecap="round"></g> <!-- artifact→company -->
-        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".95" stroke-linecap="round"></g> <!-- member→company -->
+        <!-- edges -->
+        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".95" stroke-linecap="round"></g>
+        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".95" stroke-linecap="round"></g>
+        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".95" stroke-linecap="round"></g>
 
-        <!-- nodes (ONE EACH) -->
+        <!-- nodes (one each) -->
         <g id="member"></g>
         <g id="artifact"></g>
         <g id="company"></g>
@@ -97,19 +98,32 @@
         <span class="pill" id="aName">—</span>
       </div>
 
-      <div class="muted legend" style="margin-top:10px">
-        <span style="background:#f59e0b"></span> Member → Policy/Law/Ruling
-        &nbsp;&nbsp; <span style="background:#3b82f6"></span> Policy/Law/Ruling → Company
-        &nbsp;&nbsp; <span style="background:#ef4444"></span> Member → Company
+      <div class="muted" style="margin-top:10px">
+        <span style="background:#f59e0b;display:inline-block;width:14px;height:4px;border-radius:3px;vertical-align:middle"></span>
+        Member→Policy
+        &nbsp;&nbsp; <span style="background:#3b82f6;display:inline-block;width:14px;height:4px;border-radius:3px;vertical-align:middle"></span>
+        Policy→Company
+        &nbsp;&nbsp; <span style="background:#ef4444;display:inline-block;width:14px;height:4px;border-radius:3px;vertical-align:middle"></span>
+        Member→Company
       </div>
     </section>
   </main>
 
   <script>
-    // layout constants (one-by-one)
-    const memX = 300, memY = 260;              // single member
-    const coX  = 1140, coY  = 260;             // single company
-    const polY = 620,  polX = (420 + 980) / 2; // single policy centered
+    // ---- host sanity hint (repo view vs pages) ----
+    (function(){
+      const hint = document.getElementById('hostHint');
+      const isRepoView = location.hostname === 'github.com' || location.pathname.includes('/blob/');
+      if(isRepoView){
+        hint.style.display = 'block';
+        hint.textContent = 'Heads up: Open this via your GitHub Pages site (https://<user>.github.io/<repo>/). The repo viewer blocks fetching ./data.json.';
+      }
+    })();
+
+    // ---- layout constants ----
+    const memX = 300, memY = 260;
+    const coX  = 1140, coY  = 260;
+    const polY = 620,  polX = (420 + 980) / 2;
 
     const $ = id => document.getElementById(id);
     const NS = "http://www.w3.org/2000/svg";
@@ -120,7 +134,7 @@
       membersForCompany: [],
       artifactsForCompany: [],
       iM: 0, iA: 0,
-      tickerToId: {} // ticker(lower) -> company.id
+      tickerToId: {}
     };
 
     function uniqBy(arr, keyFn){
@@ -134,18 +148,15 @@
       const comp = companies.find(c=>c.id===cid);
       if(!comp) return { comp:null, mList:[], aList:[], ma:[], ac:[], mc:[] };
 
-      // policies linked to company
       const acEdges = (edges.artifact_company||[]).filter(e=>e.to===cid);
       const aIds = new Set(acEdges.map(e=>e.from));
       const aList = artifacts.filter(a=>aIds.has(a.id));
 
-      // members with direct ties OR via those policies
       const mcEdges = (edges.member_company||[]).filter(e=>e.to===cid);
       const maEdgesAll = (edges.member_artifact||[]).filter(e=>aIds.has(e.to));
       const mIds = new Set([...mcEdges.map(e=>e.from), ...maEdgesAll.map(e=>e.from)]);
       const mList = members.filter(m=>mIds.has(m.id));
 
-      // edges among selected
       const ma = (edges.member_artifact||[]).filter(e=>mIds.has(e.from) && aIds.has(e.to));
       const ac = acEdges.slice();
       const mc = (edges.member_company||[]).filter(e=>mIds.has(e.from) && e.to===cid);
@@ -207,7 +218,6 @@
       g.appendChild(node);
     }
 
-    // straight line + centered translucent label
     function drawEdgeWithLabel(gLine, gLabel, x1,y1,x2,y2, stroke, text){
       const line = document.createElementNS(NS,"line");
       line.setAttribute("x1",x1); line.setAttribute("y1",y1);
@@ -257,7 +267,6 @@
       S.membersForCompany   = uniqBy(mList, m => m.id);
       S.artifactsForCompany = uniqBy(aList, a => a.id);
 
-      // clamp indices
       if(S.iM >= S.membersForCompany.length) S.iM = 0;
       if(S.iA >= S.artifactsForCompany.length) S.iA = 0;
 
@@ -273,7 +282,6 @@
       $("mName").textContent = curM ? `${curM.name}${curM.party||curM.state?` (${[curM.party, curM.state].filter(Boolean).join("–")})`:""}` : "—";
       $("aName").textContent = curA ? (curA.short_title || curA.title) : "—";
 
-      // draw exactly ONE of each edge (one-by-one)
       if(curM && curA){
         const e = (ma||[]).find(e => e.from===curM.id && e.to===curA.id);
         const label = e?.note || e?.relation || "";
@@ -294,23 +302,20 @@
         drawEdgeWithLabel(edgesMC, labels, memX+20, memY, coX-180, coY, "#ef4444", label);
       }
 
-      // nav enable/disable + timeline button
       $("prevM").disabled = $("nextM").disabled = S.membersForCompany.length<=1;
       $("prevA").disabled = $("nextA").disabled = S.artifactsForCompany.length<=1;
       $("openTimeline").disabled = !S.activeCompanyId;
     }
 
-    // ----- selection helpers -----
     function setCompanyById(cid){
       S.activeCompanyId = cid || "";
       S.iM = 0; S.iA = 0;
-      const comp = S.data.companies.find(c=>c.id===cid);
+      const comp = S.data?.companies.find(c=>c.id===cid);
       $("tickerSelect").value = cid || "";
       if(comp) $("searchTicker").value = comp.ticker || "";
       render();
     }
 
-    // ----- controls -----
     $("prevM").addEventListener("click", () => {
       if(S.membersForCompany.length){ S.iM = (S.iM-1+S.membersForCompany.length)%S.membersForCompany.length; render(); }
     });
@@ -325,16 +330,13 @@
     });
     $("clearSel").addEventListener("click", () => setCompanyById(""));
 
-    // open timeline page for the selected ticker
     $("openTimeline").addEventListener("click", () => {
       if(!S.activeCompanyId) return;
       const comp = S.data.companies.find(c=>c.id===S.activeCompanyId);
       const t = (comp?.ticker || "").toUpperCase();
-      // pass ticker as query param so index2.html can preselect (safe even if it ignores it)
       window.location.href = `index2.html?ticker=${encodeURIComponent(t)}`;
     });
 
-    // search input with datalist: choose ticker → select company
     $("searchTicker").addEventListener("change", (e)=>{
       const val = (e.target.value||"").trim().toLowerCase();
       const id = S.tickerToId[val];
@@ -347,16 +349,15 @@
         if(id) setCompanyById(id);
       }
     });
-
-    // explicit dropdown
     $("tickerSelect").addEventListener("change", (e)=> setCompanyById(e.target.value));
 
-    // boot
-    fetch('./data.json')
-      .then(r=>r.json())
+    // --- robust fetch of data.json ---
+    function dataUrl(){ return new URL('./data.json', location.href).href; }
+
+    fetch(dataUrl(), {cache:'no-store'})
+      .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
       .then(d => {
         S.data = d;
-        // maps & dropdowns
         const dl = $("tickersList");
         const sel = $("tickerSelect");
         sel.innerHTML = `<option value="">Select a ticker…</option>`;
@@ -364,22 +365,17 @@
           const t = (c.ticker||"").trim();
           if(t){
             S.tickerToId[t.toLowerCase()] = c.id;
-            // datalist option
-            const o = document.createElement("option");
-            o.value = t;
-            dl.appendChild(o);
+            const o = document.createElement("option"); o.value = t; dl.appendChild(o);
           }
-          // select option
           const so = document.createElement("option");
-          so.value = c.id;
-          so.textContent = `${t || '—'} — ${c.name}`;
+          so.value = c.id; so.textContent = `${t || '—'} — ${c.name}`;
           sel.appendChild(so);
         });
         render();
       })
       .catch(err => {
-        console.error(err);
-        document.body.insertAdjacentHTML('beforeend','<div class="wrap"><div class="panel">Failed to load ./data.json</div></div>');
+        console.error('Failed to load data.json:', err);
+        document.body.insertAdjacentHTML('beforeend','<div class="wrap"><div class="panel">Failed to load ./data.json. If you are viewing this on github.com, open your GitHub Pages URL instead.</div></div>');
       });
   </script>
 </body>
