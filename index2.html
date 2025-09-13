@@ -1,68 +1,65 @@
-<!-- index2.html -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ticker Timeline — Trade Context</title>
+  <title>Ticker Timeline — Price & Events</title>
   <style>
-    :root{ --bg:#0f172a; --panel:#0b1222; --text:#e5e7eb; --sub:#94a3b8; --border:#334155; --accent:#3b82f6; }
+    :root{
+      --bg:#0f172a; --panel:#0b1222; --text:#e5e7eb; --sub:#94a3b8; --border:#334155;
+      --axis:#42546f; --grid:#243049; --line:#a5b4fc; --past:#22c55e; --future:#f59e0b; --target:#ef4444;
+      --band:#1f2937;
+    }
     *{ box-sizing:border-box }
     body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial;
       background:var(--bg); color:var(--text); font-size:18px; line-height:1.45; }
     header{ position:sticky; top:0; background:#0f172ad0; border-bottom:1px solid var(--border); backdrop-filter:saturate(1.05) blur(6px); }
-    .wrap{ max-width:1100px; margin:0 auto; padding:12px 16px; }
+    .wrap{ max-width:1200px; margin:0 auto; padding:12px 16px; }
     h1{ margin:0; font-size:22px }
-    .controls{ display:grid; gap:10px; grid-template-columns:1fr; margin-top:10px }
-    @media (min-width:780px){ .controls{ grid-template-columns:2fr 1.2fr .8fr } }
-    input, select, button{
+    .controls{ display:grid; gap:10px; grid-template-columns:1fr 1fr auto auto; margin-top:10px }
+    @media (max-width:800px){ .controls{ grid-template-columns:1fr 1fr auto; } }
+    input, select, a.button, button{
       background:#0b1222; color:var(--text); border:1px solid var(--border);
-      border-radius:12px; padding:10px 12px; font-size:16px;
+      border-radius:12px; padding:10px 12px; font-size:16px; text-decoration:none; text-align:center;
     }
-    button:disabled{ opacity:.5; cursor:not-allowed }
+    a.button:hover, button:hover{ filter:brightness(1.08); }
     .panel{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; margin-top:12px }
     .muted{ color:var(--sub); font-size:14px }
     .pill{ padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--sub) }
-    /* timeline */
-    .tl{ position:relative; margin-top:8px; }
-    .tl:before{ content:""; position:absolute; left:28px; top:0; bottom:0; width:2px; background:#304055; }
-    .evt{ position:relative; display:grid; grid-template-columns:56px 1fr; gap:12px; padding:10px 0; }
-    .dot{ width:12px; height:12px; border-radius:50%; border:2px solid var(--accent); background:#0b1222; position:absolute; left:22px; top:18px; }
-    .card{ background:#0b1222; border:1px solid var(--border); border-radius:14px; padding:12px; }
-    .row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap }
-    .date{ width:56px; font-size:13px; color:var(--sub); text-align:right; padding-top:6px }
-    .title{ font-weight:600 }
-    .range{ font-size:13px; color:var(--sub) }
-    .badges{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px }
-    a.source{ color:#93c5fd; text-decoration:none; border-bottom:1px dotted #93c5fd }
-    .warn{ border-style:dashed }
+    .legend{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:10px; color:var(--sub); font-size:14px }
+    .legend .sw{ width:14px; height:4px; border-radius:3px; display:inline-block; vertical-align:middle }
+    svg text{ font-family:inherit }
+    .hint{ margin-top:8px }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap">
-      <h1>Ticker Timeline — Trade Context</h1>
+      <h1>Ticker Timeline — Price & Events</h1>
       <div class="controls">
-        <!-- input with datalist dropdown -->
+        <a class="button" href="index.html" title="Back to graph">← Back</a>
+
+        <!-- type-ahead with dropdown -->
         <input id="searchTicker" list="tickersList" placeholder="Type a ticker (e.g., RDW) and press Enter…" />
         <datalist id="tickersList"></datalist>
 
-        <!-- explicit select -->
         <select id="tickerSelect"><option value="">Select a ticker…</option></select>
-
         <button id="clearSel">Clear</button>
       </div>
-      <div class="muted" id="hint">Pick a ticker to see dated events, policy milestones, and insider/company links.</div>
+      <div class="muted hint">Past events plot at their dates on the price line. Future events/targets appear out to the right of “today.”</div>
     </div>
   </header>
 
   <main class="wrap">
     <section class="panel">
-      <div class="row">
-        <span class="pill" id="selTicker">—</span>
-        <span class="pill" id="selName">—</span>
+      <div class="legend">
+        <span class="sw" style="background:var(--line)"></span> Price
+        <span class="sw" style="background:var(--past)"></span> Past event
+        <span class="sw" style="background:var(--future)"></span> Future event
+        <span class="sw" style="background:var(--target)"></span> Target price
       </div>
-      <div class="tl" id="timeline"></div>
+      <svg id="chart" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" style="width:100%;height:60vh"></svg>
+      <div class="muted" id="caption" style="margin-top:8px"></div>
     </section>
   </main>
 
@@ -72,96 +69,231 @@
     const S = {
       data:null,
       tickerToId:{},
-      activeCompanyId:""
+      activeCompanyId:"",
+      today: new Date() // viewer's local "today"
     };
 
-    function fmtDate(s){
-      if(!s) return "";
-      const d = new Date(s+"T00:00:00");
-      if(Number.isNaN(d.getTime())) return s;
-      const mo = d.toLocaleString(undefined,{month:"short"});
-      return `${mo} ${String(d.getDate()).padStart(2,"0")}, ${d.getFullYear()}`;
+    // ---------- utilities ----------
+    function parseDate(s){ return new Date(s + "T00:00:00"); }
+    function fmtDate(d){
+      if(!(d instanceof Date)) d = parseDate(d);
+      return d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"2-digit"});
     }
-    function fmtRange(ev){
-      if(ev.start && ev.end) return `${fmtDate(ev.start)} – ${fmtDate(ev.end)}`;
-      return fmtDate(ev.date || ev.start || ev.end);
+    function lerp(a,b,t){ return a + (b-a)*t; }
+    function nearPrice(prices, d){
+      if(!prices || !prices.length) return null;
+      const t = d.getTime();
+      // binary-ish search for nearest by time
+      let best=prices[0], bestDiff=Math.abs(new Date(prices[0].date).getTime()-t);
+      for(const p of prices){
+        const dt = Math.abs(new Date(p.date).getTime()-t);
+        if(dt < bestDiff){ best=p; bestDiff=dt; }
+      }
+      return best.close;
     }
 
-    function renderTimeline(cid){
-      const tl = $("timeline");
-      tl.innerHTML = "";
-      if(!cid){ $("selTicker").textContent="—"; $("selName").textContent="—"; return; }
+    function extentDates(prices, events){
+      let min = prices.length ? parseDate(prices[0].date) : new Date();
+      let max = prices.length ? parseDate(prices[prices.length-1].date) : new Date();
+      for(const ev of events){
+        if(ev.start){ const d=parseDate(ev.start); if(d<min) min=d; }
+        if(ev.end){ const d=parseDate(ev.end); if(d>max) max=d; }
+        if(ev.date){ const d=parseDate(ev.date); if(d<min) min=d; if(d>max) max=d; }
+        if(ev.target_date){ const d=parseDate(ev.target_date); if(d>max) max=d; }
+      }
+      // add right padding (~20 business days)
+      max = new Date(max.getTime() + 1000*60*60*24*28);
+      return [min,max];
+    }
+
+    function extentPrices(prices, events){
+      let lo=Infinity, hi=-Infinity;
+      for(const p of prices){ lo=Math.min(lo,p.close); hi=Math.max(hi,p.close); }
+      for(const ev of events){
+        if(typeof ev.target_price==="number"){ lo=Math.min(lo, ev.target_price); hi=Math.max(hi, ev.target_price); }
+      }
+      if(!isFinite(lo)||!isFinite(hi)){ lo=0; hi=1; }
+      // pad by 10%
+      const pad = (hi-lo)*0.1 || 1;
+      return [lo-pad, hi+pad];
+    }
+
+    // ---------- rendering ----------
+    function renderChart(cid){
+      const svg = $("chart");
+      svg.innerHTML = "";
+
+      if(!cid){
+        $("caption").textContent = "Pick a ticker above.";
+        return;
+      }
 
       const co = S.data.companies.find(c=>c.id===cid);
-      $("selTicker").textContent = co.ticker || "—";
-      $("selName").textContent = co.name || "—";
-
+      const prices = (S.data.prices && S.data.prices[cid]) ? [...S.data.prices[cid]] : [];
       const events = (S.data.timelines && S.data.timelines[cid]) ? [...S.data.timelines[cid]] : [];
-      // sort by start/date ascending
+
+      if(!prices.length){
+        $("caption").textContent = `${co.ticker || ""} — no price series in data.json`;
+      } else {
+        $("caption").textContent = `${co.ticker || ""} — ${co.name}`;
+      }
+
+      // sort by date asc
+      prices.sort((a,b)=> a.date.localeCompare(b.date));
       events.sort((a,b)=>{
-        const ax = new Date(a.start || a.date || "2100-01-01").getTime();
-        const bx = new Date(b.start || b.date || "2100-01-01").getTime();
-        return ax - bx;
+        const ax = a.start||a.date||a.target_date||"2100-01-01";
+        const bx = b.start||b.date||b.target_date||"2100-01-01";
+        return ax.localeCompare(bx);
       });
 
-      for(const ev of events){
-        const li = document.createElement("div");
-        li.className = "evt";
-        const dv = document.createElement("div");
-        dv.className = "date";
-        dv.textContent = fmtRange(ev);
-        const card = document.createElement("div");
-        card.className = "card" + (ev.status==="unverified" ? " warn" : "");
-        const dot = document.createElement("div");
-        dot.className = "dot";
-        const title = document.createElement("div");
-        title.className = "title";
-        title.textContent = ev.title || ev.type || "Event";
-        const note = document.createElement("div");
-        note.textContent = ev.note || "";
-        const badges = document.createElement("div");
-        badges.className = "badges";
-        if(ev.type){ const b=document.createElement("span"); b.className="pill"; b.textContent=ev.type; badges.appendChild(b); }
-        if(typeof ev.confidence==="number"){ const b=document.createElement("span"); b.className="pill"; b.textContent=`conf ${Math.round(ev.confidence*100)}%`; badges.appendChild(b); }
-        if(ev.source){ const b=document.createElement("a"); b.href=ev.source; b.target="_blank"; b.rel="noopener"; b.className="source"; b.textContent="source"; badges.appendChild(b); }
-        card.append(title);
-        if(ev.range_label){ const r=document.createElement("div"); r.className="range"; r.textContent=ev.range_label; card.appendChild(r); }
-        if(note.textContent) card.appendChild(note);
-        if(badges.children.length) card.appendChild(badges);
-        li.append(dv, card, dot);
-        tl.appendChild(li);
+      const W=1200, H=520;
+      const left=80, right=30, top=24, bottom=70;
+
+      const [d0,d1] = extentDates(prices, events);
+      const tMin = d0.getTime(), tMax = d1.getTime();
+      const x = (d)=> left + ( (d.getTime()-tMin)/(tMax-tMin) ) * (W-left-right);
+
+      const [y0,y1] = extentPrices(prices, events);
+      const y = (v)=> top + (1 - ( (v - y0)/(y1 - y0) )) * (H-top-bottom);
+
+      // grid + axes
+      const g = (tag,attrs) => {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        for(const k in attrs) el.setAttribute(k, attrs[k]);
+        svg.appendChild(el);
+        return el;
+      };
+
+      // background grid y
+      const yTicks = 5;
+      for(let i=0;i<=yTicks;i++){
+        const yy = lerp(top, H-bottom, i/yTicks);
+        g("line",{x1:left, y1:yy, x2:W-right, y2:yy, stroke:"var(--grid)", "stroke-width":"1"});
+        const val = lerp(y1,y0, i/yTicks);
+        const tx = g("text",{x:left-10, y:yy+4, fill:"var(--sub)", "text-anchor":"end", "font-size":"12"});
+        tx.textContent = "$" + (Math.round(val*100)/100).toLocaleString();
       }
+
+      // x ticks monthly
+      const months = [];
+      const tmp = new Date(d0.getTime());
+      tmp.setDate(1);
+      while(tmp <= d1){
+        months.push(new Date(tmp.getTime()));
+        tmp.setMonth(tmp.getMonth()+1);
+      }
+      for(const md of months){
+        const xx = x(md);
+        g("line",{x1:xx, y1:H-bottom, x2:xx, y2:H-bottom+6, stroke:"var(--axis)"});
+        const tt = g("text",{x:xx, y:H-bottom+22, fill:"var(--sub)", "text-anchor":"middle", "font-size":"12"});
+        tt.textContent = md.toLocaleString(undefined,{month:"short", year: (md.getMonth()===0 ? "numeric" : undefined)});
+      }
+
+      // axis lines
+      g("line",{x1:left, y1:H-bottom, x2:W-right, y2:H-bottom, stroke:"var(--axis)", "stroke-width":"1"});
+      g("line",{x1:left, y1:top, x2:left, y2:H-bottom, stroke:"var(--axis)", "stroke-width":"1"});
+
+      // today line
+      const todayX = x(new Date(S.today.getFullYear(), S.today.getMonth(), S.today.getDate()));
+      if(todayX>left && todayX<W-right){
+        g("line",{x1:todayX, y1:top, x2:todayX, y2:H-bottom, stroke:"#94a3b8", "stroke-dasharray":"4 4"});
+        const tt = g("text",{x:todayX+6, y:top+14, fill:"#94a3b8", "font-size":"12"});
+        tt.textContent = "Today";
+      }
+
+      // price line
+      const path = prices.map((p,i)=>{
+        const px = x(parseDate(p.date));
+        const py = y(p.close);
+        return (i===0?"M":"L") + px + " " + py;
+      }).join(" ");
+      g("path",{d:path, fill:"none", stroke:"var(--line)", "stroke-width":"2.5"});
+
+      // shaded quarter windows, if any
+      for(const ev of events){
+        if(ev.start && ev.end){
+          const x1 = x(parseDate(ev.start));
+          const x2 = x(parseDate(ev.end));
+          const rect = g("rect",{
+            x:Math.min(x1,x2), y:top, width:Math.abs(x2-x1), height:(H-top-bottom),
+            fill:"var(--band)", "fill-opacity":"0.25", stroke:"var(--border)"
+          });
+          // label
+          const tx = g("text",{x:(x1+x2)/2, y:top+14, fill:"var(--sub)", "font-size":"12","text-anchor":"middle"});
+          tx.textContent = ev.title || ev.type || "window";
+        }
+      }
+
+      // markers (past & future)
+      function marker(cx, cy, color, label){
+        const dot = g("circle",{cx, cy, r:5, fill:color, stroke:"#0b1222", "stroke-width":"1.5"});
+        if(label){
+          const ty = cy - 10;
+          const t = g("text",{x:cx, y:ty, fill:color, "text-anchor":"middle", "font-size":"12"});
+          t.textContent = label;
+        }
+      }
+
+      const lastPrice = prices.length ? prices[prices.length-1].close : null;
+
+      for(const ev of events){
+        // determine date for plotting
+        const d = ev.date ? parseDate(ev.date) : (ev.target_date ? parseDate(ev.target_date) : null);
+        if(!d) continue;
+
+        const isFuture = d > S.today;
+        const xx = x(d);
+
+        // when we can anchor to price
+        let yy = null;
+        if(!isFuture){
+          const pv = nearPrice(prices, d);
+          if(typeof pv==="number") yy = y(pv);
+        }
+
+        // target price if provided
+        if(typeof ev.target_price === "number"){
+          yy = y(ev.target_price);
+        }
+
+        // If still no y, default to last price line or a comfortable baseline
+        if(yy===null){
+          yy = typeof lastPrice==="number" ? y(lastPrice) : y((y0+y1)/2);
+        }
+
+        const color = typeof ev.target_price === "number" ? "var(--target)" : (isFuture ? "var(--future)" : "var(--past)");
+        const label = ev.title || ev.type || "";
+
+        marker(xx, yy, color, label);
+
+        // thin vertical guide for readability
+        g("line",{x1:xx, y1:yy+6, x2:xx, y2:H-bottom, stroke:color, "stroke-opacity":"0.25"});
+      }
+
+      // target price “edged to right”: if you want an extra dedicated marker beyond last event
+      // we’ll auto-place any event with type:"target" or any event having target_price & target_date in the future
+      // (already handled above). Nothing else needed here.
     }
 
+    // ---------- selection ----------
     function setCompanyById(cid){
       S.activeCompanyId = cid || "";
       $("tickerSelect").value = cid || "";
       const comp = S.data.companies.find(c=>c.id===cid);
       $("searchTicker").value = comp ? (comp.ticker || "") : "";
-      renderTimeline(S.activeCompanyId);
+      renderChart(S.activeCompanyId);
     }
 
-    // controls
-    $("clearSel").addEventListener("click", ()=> setCompanyById(""));
+    function getQueryTicker(){
+      const q = new URLSearchParams(location.search);
+      const t = (q.get("ticker") || "").trim().toLowerCase();
+      return t || "";
+    }
 
-    $("tickerSelect").addEventListener("change", e => setCompanyById(e.target.value));
-
-    $("searchTicker").addEventListener("keydown", e=>{
-      if(e.key==="Enter"){
-        const val = (e.target.value||"").trim().toLowerCase();
-        const id = S.tickerToId[val];
-        if(id) setCompanyById(id);
-      }
-    });
-    $("searchTicker").addEventListener("change", e=>{
-      const val = (e.target.value||"").trim().toLowerCase();
-      const id = S.tickerToId[val];
-      if(id) setCompanyById(id);
-    });
-
-    // boot
+    // ---------- boot ----------
     fetch("./data.json").then(r=>r.json()).then(d=>{
       S.data = d;
+
       // fill ticker maps + UI
       const dl = $("tickersList");
       const sel = $("tickerSelect");
@@ -173,12 +305,36 @@
         so.value = c.id; so.textContent = `${t || "—"} — ${c.name}`;
         sel.appendChild(so);
       });
-      renderTimeline("");
+
+      // preselect from ?ticker=RDW
+      const qt = getQueryTicker();
+      if(qt && S.tickerToId[qt]) setCompanyById(S.tickerToId[qt]); else renderChart("");
+
+      // controls
+      $("clearSel").addEventListener("click", ()=> setCompanyById(""));
+      $("tickerSelect").addEventListener("change", e => setCompanyById(e.target.value));
+      $("searchTicker").addEventListener("keydown", e=>{
+        if(e.key==="Enter"){
+          const val = (e.target.value||"").trim().toLowerCase();
+          const id = S.tickerToId[val];
+          if(id) setCompanyById(id);
+        }
+      });
+      $("searchTicker").addEventListener("change", e=>{
+        const val = (e.target.value||"").trim().toLowerCase();
+        const id = S.tickerToId[val];
+        if(id) setCompanyById(id);
+      });
+
     }).catch(err=>{
       console.error(err);
-      document.body.insertAdjacentHTML("beforeend",'<div class="wrap"><div class="panel">Failed to load ./data.json</div></div>');
+      const svg = $("chart");
+      svg.innerHTML = "";
+      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.setAttribute("x","40"); t.setAttribute("y","40");
+      t.setAttribute("fill","#fca5a5"); t.textContent = "Failed to load ./data.json";
+      svg.appendChild(t);
     });
   </script>
 </body>
 </html>
-
