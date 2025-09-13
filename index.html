@@ -15,7 +15,7 @@
     .wrap{ max-width:1400px; margin:0 auto; padding:12px 16px; }
     h1{ margin:0; font-size:22px }
     .controls{ display:grid; gap:10px; grid-template-columns:1fr; margin-top:10px }
-    @media (min-width:700px){ .controls{ grid-template-columns:1fr 1fr 1fr } }
+    @media (min-width:780px){ .controls{ grid-template-columns:2fr 2fr 1fr } }
     input, select, button{
       background:#0b1222; color:var(--text); border:1px solid var(--border);
       border-radius:12px; padding:10px 12px; font-size:16px;
@@ -35,11 +35,16 @@
     <div class="wrap">
       <h1>Gov → Policy → Public Co. (Upside-Down Triangle)</h1>
       <div class="controls">
-        <input id="searchTicker" placeholder="Search by ticker (e.g., ACME, OMRB, RDW)…" />
+        <!-- SEARCH INPUT WITH DROPDOWN (datalist) -->
+        <input id="searchTicker" list="tickersList" placeholder="Type a ticker (ACME, OMRB, RDW)…" />
+        <datalist id="tickersList"></datalist>
+
+        <!-- EXPLICIT TICKER DROPDOWN -->
         <select id="tickerSelect">
           <option value="">Select a ticker…</option>
         </select>
-        <button id="clearSel">Clear selection</button>
+
+        <button id="clearSel">Clear</button>
       </div>
     </div>
   </header>
@@ -57,26 +62,26 @@
 
         <!-- labels -->
         <g font-size="14" fill="#94a3b8">
-          <text x="150"  y="32">Members</text>
+          <text x="160"  y="32">Members</text>
           <text x="1190" y="32">Public Companies</text>
           <text x="650"  y="702">Policies / Laws / Rulings</text>
         </g>
 
         <!-- edges (behind) -->
-        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".9"></g> <!-- member→artifact (amber) -->
-        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".9"></g> <!-- artifact→company (blue) -->
-        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".9"></g> <!-- member→company (red) -->
+        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".95" stroke-linecap="round"></g> <!-- member→artifact -->
+        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".95" stroke-linecap="round"></g> <!-- artifact→company -->
+        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".95" stroke-linecap="round"></g> <!-- member→company -->
 
-        <!-- nodes -->
-        <g id="member"></g>    <!-- single member -->
-        <g id="artifact"></g>  <!-- single policy -->
-        <g id="company"></g>   <!-- single company -->
+        <!-- nodes (ONE EACH) -->
+        <g id="member"></g>
+        <g id="artifact"></g>
+        <g id="company"></g>
 
         <!-- labels (on top) -->
         <g id="labels"></g>
       </svg>
 
-      <!-- selection bars -->
+      <!-- one-by-one nav bars -->
       <div class="bar" id="memberBar">
         <button id="prevM">◀ Prev member</button>
         <span class="idx" id="mIdx">0/0</span>
@@ -100,10 +105,10 @@
   </main>
 
   <script>
-    // layout constants
-    const memX = 300, memY = 260;              // single member position
-    const coX  = 1140, coY  = 260;             // single company position
-    const polY = 620, polX  = (420 + 980) / 2; // single policy centered on baseline
+    // layout constants (one-by-one)
+    const memX = 300, memY = 260;              // single member
+    const coX  = 1140, coY  = 260;             // single company
+    const polY = 620,  polX = (420 + 980) / 2; // single policy centered
 
     const $ = id => document.getElementById(id);
     const NS = "http://www.w3.org/2000/svg";
@@ -111,9 +116,10 @@
     const S = {
       data: null,
       activeCompanyId: "",
-      membersForCompany: [],  // unique list (direct ties + via policies)
-      artifactsForCompany: [],// all policies tied to company
-      iM: 0, iA: 0
+      membersForCompany: [],
+      artifactsForCompany: [],
+      iM: 0, iA: 0,
+      tickerToId: {} // ticker(lower) -> company.id
     };
 
     function uniqBy(arr, keyFn){
@@ -132,18 +138,13 @@
       const aIds = new Set(acEdges.map(e=>e.from));
       const aList = artifacts.filter(a=>aIds.has(a.id));
 
-      // members with direct ties to company
+      // members with direct ties OR via those policies
       const mcEdges = (edges.member_company||[]).filter(e=>e.to===cid);
-      const mDirectIds = new Set(mcEdges.map(e=>e.from));
-
-      // members tied via those policies
       const maEdgesAll = (edges.member_artifact||[]).filter(e=>aIds.has(e.to));
-      const mViaIds = new Set(maEdgesAll.map(e=>e.from));
-
-      const mIds = new Set([...mDirectIds, ...mViaIds]);
+      const mIds = new Set([...mcEdges.map(e=>e.from), ...maEdgesAll.map(e=>e.from)]);
       const mList = members.filter(m=>mIds.has(m.id));
 
-      // keep only edges among selected
+      // edges among selected
       const ma = (edges.member_artifact||[]).filter(e=>mIds.has(e.from) && aIds.has(e.to));
       const ac = acEdges.slice();
       const mc = (edges.member_company||[]).filter(e=>mIds.has(e.from) && e.to===cid);
@@ -205,17 +206,18 @@
       g.appendChild(node);
     }
 
+    // straight line + centered translucent label
     function drawEdgeWithLabel(gLine, gLabel, x1,y1,x2,y2, stroke, text){
       const line = document.createElementNS(NS,"line");
       line.setAttribute("x1",x1); line.setAttribute("y1",y1);
       line.setAttribute("x2",x2); line.setAttribute("y2",y2);
       line.setAttribute("stroke", stroke); line.setAttribute("stroke-width","2");
+      line.setAttribute("stroke-linecap","round");
       gLine.appendChild(line);
 
-      // label box at midpoint
       const midx = (x1+x2)/2, midy = (y1+y2)/2;
       const padX = 10;
-      const estW = Math.max(70, Math.min(320, (text||"").length * 7 + padX*2));
+      const estW = Math.max(70, Math.min(360, (text||"").length * 7 + padX*2));
       const estH = 24;
 
       const group = document.createElementNS(NS,"g");
@@ -250,7 +252,7 @@
       }
 
       const { comp, mList, aList, ma, ac, mc } = hydrateForCompany(S.activeCompanyId);
-      S.membersForCompany  = uniqBy(mList, m => m.id);
+      S.membersForCompany   = uniqBy(mList, m => m.id);
       S.artifactsForCompany = uniqBy(aList, a => a.id);
 
       // clamp indices
@@ -269,11 +271,7 @@
       $("mName").textContent = curM ? `${curM.name}${curM.party||curM.state?` (${[curM.party, curM.state].filter(Boolean).join("–")})`:""}` : "—";
       $("aName").textContent = curA ? (curA.short_title || curA.title) : "—";
 
-      // map for quick lookup
-      const Midx = Object.fromEntries(S.data.members.map(m=>[m.id,m]));
-      const Aidx = Object.fromEntries(S.data.artifacts.map(a=>[a.id,a]));
-
-      // draw selected edges only (one-by-one)
+      // draw exactly ONE of each edge (jitter-free, one-by-one)
       if(curM && curA){
         const e = (ma||[]).find(e => e.from===curM.id && e.to===curA.id);
         const label = e?.note || e?.relation || "";
@@ -294,49 +292,51 @@
         drawEdgeWithLabel(edgesMC, labels, memX+20, memY, coX-180, coY, "#ef4444", label);
       }
 
-      // enable/disable nav
+      // nav enable/disable
       $("prevM").disabled = $("nextM").disabled = S.membersForCompany.length<=1;
       $("prevA").disabled = $("nextA").disabled = S.artifactsForCompany.length<=1;
     }
 
-    // ----- controls -----
+    // ----- selection helpers -----
     function setCompanyById(cid){
       S.activeCompanyId = cid || "";
       S.iM = 0; S.iA = 0;
-      // sync dropdown & clear search text if exact match
       const comp = S.data.companies.find(c=>c.id===cid);
       $("tickerSelect").value = cid || "";
-      if(comp && $("searchTicker").value.toLowerCase() === (comp.ticker||"").toLowerCase()){
-        $("searchTicker").value = comp.ticker;
-      }
+      if(comp) $("searchTicker").value = comp.ticker || "";
       render();
     }
 
-    $("prevM").addEventListener("click", () => { if(S.membersForCompany.length){ S.iM = (S.iM-1+S.membersForCompany.length)%S.membersForCompany.length; render(); } });
-    $("nextM").addEventListener("click", () => { if(S.membersForCompany.length){ S.iM = (S.iM+1)%S.membersForCompany.length; render(); } });
-    $("prevA").addEventListener("click", () => { if(S.artifactsForCompany.length){ S.iA = (S.iA-1+S.artifactsForCompany.length)%S.artifactsForCompany.length; render(); } });
-    $("nextA").addEventListener("click", () => { if(S.artifactsForCompany.length){ S.iA = (S.iA+1)%S.artifactsForCompany.length; render(); } });
+    // ----- controls -----
+    $("prevM").addEventListener("click", () => {
+      if(S.membersForCompany.length){ S.iM = (S.iM-1+S.membersForCompany.length)%S.membersForCompany.length; render(); }
+    });
+    $("nextM").addEventListener("click", () => {
+      if(S.membersForCompany.length){ S.iM = (S.iM+1)%S.membersForCompany.length; render(); }
+    });
+    $("prevA").addEventListener("click", () => {
+      if(S.artifactsForCompany.length){ S.iA = (S.iA-1+S.artifactsForCompany.length)%S.artifactsForCompany.length; render(); }
+    });
+    $("nextA").addEventListener("click", () => {
+      if(S.artifactsForCompany.length){ S.iA = (S.iA+1)%S.artifactsForCompany.length; render(); }
+    });
     $("clearSel").addEventListener("click", () => setCompanyById(""));
 
-    // search by ticker (press Enter for exact; or if unique match, auto-select)
-    $("searchTicker").addEventListener("input", (e)=>{
-      const q=e.target.value.trim().toLowerCase();
-      if(!q){ $("tickerSelect").value=""; setCompanyById(""); return; }
-      const matches = S.data.companies.filter(c =>
-        (c.ticker && c.ticker.toLowerCase().includes(q))
-      );
-      if(matches.length===1 && matches[0].ticker.toLowerCase()===q){
-        setCompanyById(matches[0].id);
-      }
+    // search input with datalist: choose ticker → select company
+    $("searchTicker").addEventListener("change", (e)=>{
+      const val = (e.target.value||"").trim().toLowerCase();
+      const id = S.tickerToId[val];
+      if(id) setCompanyById(id);
     });
     $("searchTicker").addEventListener("keydown", (e)=>{
       if(e.key==="Enter"){
-        const q=e.target.value.trim().toLowerCase();
-        const comp = S.data.companies.find(c=> (c.ticker||"").toLowerCase()===q);
-        if(comp){ setCompanyById(comp.id); }
+        const val = (e.target.value||"").trim().toLowerCase();
+        const id = S.tickerToId[val];
+        if(id) setCompanyById(id);
       }
     });
 
+    // explicit dropdown
     $("tickerSelect").addEventListener("change", (e)=> setCompanyById(e.target.value));
 
     // boot
@@ -344,10 +344,26 @@
       .then(r=>r.json())
       .then(d => {
         S.data = d;
-        // fill dropdown
+        // maps & dropdowns
+        const dl = $("tickersList");
         const sel = $("tickerSelect");
-        sel.innerHTML = `<option value="">Select a ticker…</option>` +
-          d.companies.map(c => `<option value="${c.id}">${(c.ticker||'—')} — ${c.name}</option>`).join('');
+        const opts = [];
+        sel.innerHTML = `<option value="">Select a ticker…</option>`;
+        d.companies.forEach(c=>{
+          const t = (c.ticker||"").trim();
+          if(t){
+            S.tickerToId[t.toLowerCase()] = c.id;
+            // datalist option
+            const o = document.createElement("option");
+            o.value = t; // value must be the text user types
+            dl.appendChild(o);
+          }
+          // select option
+          const so = document.createElement("option");
+          so.value = c.id;
+          so.textContent = `${t || '—'} — ${c.name}`;
+          sel.appendChild(so);
+        });
         render();
       })
       .catch(err => {
