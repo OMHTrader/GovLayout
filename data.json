@@ -24,55 +24,77 @@
       { "from": "EO_14099",    "to": "c-OMRB", "via": "rulemaking",  "note": "Eligibility expanded" }
     ],
     "member_company": [
-      { "from": "E-001", "to": "c-RDW", "relation": "ownership", "note": "Hedge fund holdings of ~131,252 shares (user-provided example)" }
+      { "from": "E-001", "to": "c-RDW", "relation": "ownership", "note": "Hedge fund holdings of ~131,252 shares (example)" }
     ]
   },
+
+  /* ✦ NEW: time series for price charts (demo values) */
+  "prices": {
+    "c-RDW": [
+      { "date": "2025-01-02", "close": 5.10 },
+      { "date": "2025-01-15", "close": 5.40 },
+      { "date": "2025-01-31", "close": 5.25 },
+      { "date": "2025-02-14", "close": 5.65 },
+      { "date": "2025-02-27", "close": 5.90 },
+      { "date": "2025-03-14", "close": 5.70 },
+      { "date": "2025-03-31", "close": 5.85 },
+      { "date": "2025-04-15", "close": 6.10 },
+      { "date": "2025-05-15", "close": 6.40 },
+      { "date": "2025-06-30", "close": 6.20 },
+      { "date": "2025-07-15", "close": 6.55 },
+      { "date": "2025-08-25", "close": 6.80 },
+      { "date": "2025-09-12", "close": 6.65 }
+    ]
+  },
+
+  /* ✦ UPDATED: timeline events to plot on the chart (past + future) */
   "timelines": {
     "c-RDW": [
       {
-        "date": "2025-01-27",
-        "type": "policy_announcement",
-        "title": "“Golden Dome” initiative announced",
-        "note": "User-provided date for program announcement.",
-        "confidence": 0.7
+        "date": "2025-01-15",
+        "type": "policy_mention",
+        "title": "Golden Dome noted publicly",
+        "note": "Initial mention/attention around the program."
       },
       {
-        "date": "2025-02-11",
+        "date": "2025-02-27",
         "type": "policy_followup",
-        "title": "Follow-up brief/statement on Golden Dome scope",
-        "note": "User-provided milestone; details to be refined.",
-        "confidence": 0.6
+        "title": "Follow-up on Golden Dome scope",
+        "note": "Additional detail or brief."
       },
       {
         "start": "2025-03-31",
         "end": "2025-06-30",
         "type": "13f_window",
         "title": "Q2 2025 13F window",
-        "range_label": "Quarter window (Mar 31 – Jun 30)",
-        "note": "User-provided: Hudson Bay Capital buying shares during Q2.",
-        "confidence": 0.6
+        "range_label": "Mar 31 – Jun 30",
+        "note": "Hudson Bay Capital buying shares during Q2 (user provided)."
       },
       {
-        "date": "2025-07-15",
+        "date": "2025-08-25",
         "type": "leadership",
-        "title": "Gen. Guetlein named DRPM for Golden Dome for America",
-        "note": "From provided bio text; date approximated to mid-July 2025.",
-        "confidence": 0.7,
-        "status": "approximate"
+        "title": "Leadership/Program milestone",
+        "note": "Contextual leadership update relevant to Golden Dome."
       },
+      /* FUTURE events (show to the right of 'Today') */
       {
-        "type": "contact",
-        "title": "Direct contact: Guetlein ↔ RDW",
-        "note": "Unverified — add a source if/when confirmed.",
-        "status": "unverified",
-        "confidence": 0.2
-      },
-      {
+        "date": "2025-10-31",
         "type": "allocation",
-        "title": "Potential Golden Dome funding to RDW",
-        "note": "Illustrative: surveillance of missiles, anti-missile defense, ISR payloads",
-        "status": "hypothesis",
-        "confidence": 0.4
+        "title": "Golden Dome awards window",
+        "note": "Illustrative date for awarding contracts."
+      },
+      {
+        "date": "2026-01-01",
+        "type": "facility",
+        "title": "New facility opens",
+        "note": "Illustrative commissioning date for new capacity."
+      },
+      {
+        "target_date": "2025-12-15",
+        "type": "target",
+        "title": "Theoretical target",
+        "target_price": 8.90,
+        "note": "Design demo target; edit freely."
       }
     ]
   }
