@@ -15,7 +15,7 @@
     .wrap{ max-width:1400px; margin:0 auto; padding:12px 16px; }
     h1{ margin:0; font-size:22px }
     .controls{ display:grid; gap:10px; grid-template-columns:1fr; margin-top:10px }
-    @media (min-width:780px){ .controls{ grid-template-columns:2fr 2fr 1fr } }
+    @media (min-width:780px){ .controls{ grid-template-columns:2fr 1.2fr .8fr .9fr } }
     input, select, button{
       background:#0b1222; color:var(--text); border:1px solid var(--border);
       border-radius:12px; padding:10px 12px; font-size:16px;
@@ -45,6 +45,7 @@
         </select>
 
         <button id="clearSel">Clear</button>
+        <button id="openTimeline" disabled>Open timeline →</button>
       </div>
     </div>
   </header>
@@ -248,6 +249,7 @@
         $("mIdx").textContent = "0/0"; $("aIdx").textContent = "0/0";
         $("mName").textContent = "—";  $("aName").textContent = "—";
         $("prevM").disabled = $("nextM").disabled = $("prevA").disabled = $("nextA").disabled = true;
+        $("openTimeline").disabled = true;
         return;
       }
 
@@ -271,7 +273,7 @@
       $("mName").textContent = curM ? `${curM.name}${curM.party||curM.state?` (${[curM.party, curM.state].filter(Boolean).join("–")})`:""}` : "—";
       $("aName").textContent = curA ? (curA.short_title || curA.title) : "—";
 
-      // draw exactly ONE of each edge (jitter-free, one-by-one)
+      // draw exactly ONE of each edge (one-by-one)
       if(curM && curA){
         const e = (ma||[]).find(e => e.from===curM.id && e.to===curA.id);
         const label = e?.note || e?.relation || "";
@@ -292,9 +294,10 @@
         drawEdgeWithLabel(edgesMC, labels, memX+20, memY, coX-180, coY, "#ef4444", label);
       }
 
-      // nav enable/disable
+      // nav enable/disable + timeline button
       $("prevM").disabled = $("nextM").disabled = S.membersForCompany.length<=1;
       $("prevA").disabled = $("nextA").disabled = S.artifactsForCompany.length<=1;
+      $("openTimeline").disabled = !S.activeCompanyId;
     }
 
     // ----- selection helpers -----
@@ -322,6 +325,15 @@
     });
     $("clearSel").addEventListener("click", () => setCompanyById(""));
 
+    // open timeline page for the selected ticker
+    $("openTimeline").addEventListener("click", () => {
+      if(!S.activeCompanyId) return;
+      const comp = S.data.companies.find(c=>c.id===S.activeCompanyId);
+      const t = (comp?.ticker || "").toUpperCase();
+      // pass ticker as query param so index2.html can preselect (safe even if it ignores it)
+      window.location.href = `index2.html?ticker=${encodeURIComponent(t)}`;
+    });
+
     // search input with datalist: choose ticker → select company
     $("searchTicker").addEventListener("change", (e)=>{
       const val = (e.target.value||"").trim().toLowerCase();
@@ -347,7 +359,6 @@
         // maps & dropdowns
         const dl = $("tickersList");
         const sel = $("tickerSelect");
-        const opts = [];
         sel.innerHTML = `<option value="">Select a ticker…</option>`;
         d.companies.forEach(c=>{
           const t = (c.ticker||"").trim();
@@ -355,7 +366,7 @@
             S.tickerToId[t.toLowerCase()] = c.id;
             // datalist option
             const o = document.createElement("option");
-            o.value = t; // value must be the text user types
+            o.value = t;
             dl.appendChild(o);
           }
           // select option
