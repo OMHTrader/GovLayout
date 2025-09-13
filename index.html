@@ -50,23 +50,17 @@
           <text x="640"  y="680">Policies / Laws / Rulings</text>
         </g>
 
-        <!-- Branch “buildings” (context only) -->
-        <g id="branches">
-          <g transform="translate(70,80)">
-            <rect width="220" height="56" rx="10" fill="#0b1222" stroke="#334155"></rect>
-            <text x="110" y="34" text-anchor="middle" fill="#e5e7eb" font-weight="600">Capitol • White House • Supreme Court</text>
-          </g>
-        </g>
+        <!-- Edges behind nodes -->
+        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".85"></g> <!-- member→artifact (amber) -->
+        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".85"></g> <!-- artifact→company (blue) -->
+        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".85"></g> <!-- member→company (red) -->
 
-        <!-- Dynamic layers -->
+        <!-- Nodes -->
         <g id="members"></g>    <!-- left -->
         <g id="artifacts"></g>  <!-- bottom baseline -->
         <g id="companies"></g>  <!-- right -->
-        <!-- edges (drawn first so labels can sit on top) -->
-        <g id="edges-ma" fill="none" stroke="#f59e0b" stroke-opacity=".65"></g> <!-- member→artifact -->
-        <g id="edges-ac" fill="none" stroke="#3b82f6" stroke-opacity=".65"></g> <!-- artifact→company -->
-        <g id="edges-mc" fill="none" stroke="#ef4444" stroke-opacity=".65"></g> <!-- member→company -->
-        <!-- edge labels on top -->
+
+        <!-- Edge labels on top (so line appears “through” translucent box) -->
         <g id="labels"></g>
       </svg>
 
@@ -79,7 +73,7 @@
   </main>
 
   <script>
-    // ---- constants / layout ----
+    // ---- layout ----
     const memX = 300, memY0 = 120, memGapBranch = 120, memDy = 48; // left column
     const coX  = 1140, coY0 = 120, coDy = 60;                       // right column
     const baseY = 600, baseLeft = 380, baseRight = 1020;            // bottom baseline for policies
@@ -89,7 +83,7 @@
 
     const S = { data:null, q:"" };
 
-    // --------- search priority: ticker > member > policy ----------
+    // search priority: ticker > member > policy
     function computeFiltered(){
       const q = (S.q||"").trim().toLowerCase();
       const all = S.data;
@@ -101,19 +95,19 @@
           companies: all.companies.slice(),
           ma: all.edges.member_artifact.slice(),
           ac: all.edges.artifact_company.slice(),
-          mc: all.edges.member_company.slice()
+          mc: all.edges.member_company ? all.edges.member_company.slice() : []
         };
       }
 
       // 1) company by ticker (then name)
       const cTicker = all.companies.filter(c =>
         (c.ticker && c.ticker.toLowerCase().includes(q)) ||
-        (!/[a-z]/.test(q) && c.ticker && c.ticker.toLowerCase()===q) // exact ticker fast-path
+        (c.name && c.name.toLowerCase().includes(q))
       );
       if(cTicker.length){
         const cSet = new Set(cTicker.map(c=>c.id));
         const ac = all.edges.artifact_company.filter(e=>cSet.has(e.to));
-        const mc = all.edges.member_company.filter(e=>cSet.has(e.to));
+        const mc = (all.edges.member_company||[]).filter(e=>cSet.has(e.to));
         const aSet = new Set(ac.map(e=>e.from));
         const mSet = new Set(mc.map(e=>e.from));
         return {
@@ -125,13 +119,13 @@
         };
       }
 
-      // 2) members by name
+      // 2) members by name/role/party/state
       const mHit = all.members.filter(m => (m.name + " " + (m.role||"") + " " + (m.party||"") + " " + (m.state||""))
                                .toLowerCase().includes(q));
       if(mHit.length){
         const mSet = new Set(mHit.map(m=>m.id));
         const ma = all.edges.member_artifact.filter(e=>mSet.has(e.from));
-        const mc = all.edges.member_company.filter(e=>mSet.has(e.from));
+        const mc = (all.edges.member_company||[]).filter(e=>mSet.has(e.from));
         const aSet = new Set(ma.map(e=>e.to));
         const cSet = new Set(mc.map(e=>e.to));
         return {
@@ -143,7 +137,7 @@
         };
       }
 
-      // 3) policies by title
+      // 3) policies by title/short_title
       const aHit = all.artifacts.filter(a => (a.title + " " + (a.short_title||"")).toLowerCase().includes(q));
       if(aHit.length){
         const aSet = new Set(aHit.map(a=>a.id));
@@ -156,15 +150,13 @@
           members:   all.members.filter(m=>mSet.has(m.id)),
           companies: all.companies.filter(c=>cSet.has(c.id)),
           ma, ac,
-          mc: all.edges.member_company.filter(e=>mSet.has(e.from) && cSet.has(e.to))
+          mc: (all.edges.member_company||[]).filter(e=>mSet.has(e.from) && cSet.has(e.to))
         };
       }
 
-      // nothing matched → empty (or show all; here we show none to be explicit)
       return { members:[], artifacts:[], companies:[], ma:[], ac:[], mc:[] };
     }
 
-    // ---- draw helpers ----
     function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
 
     function drawMember(g, m){
@@ -219,20 +211,17 @@
       g.appendChild(node);
     }
 
-    // draw a straight line with a centered label that slightly overlays the line
+    // straight line + centered translucent label so the line shows “through”
     function drawEdgeWithLabel(gLine, gLabel, x1,y1,x2,y2, stroke, text){
-      // line
       const line = document.createElementNS(NS,"line");
       line.setAttribute("x1",x1); line.setAttribute("y1",y1);
       line.setAttribute("x2",x2); line.setAttribute("y2",y2);
       line.setAttribute("stroke", stroke); line.setAttribute("stroke-width","2");
-      line.setAttribute("stroke-opacity",".85");
       gLine.appendChild(line);
 
-      // label at midpoint
       const midx = (x1+x2)/2, midy = (y1+y2)/2;
       const padX = 10, padY = 6;
-      const estW = Math.max(70, Math.min(260, (text||"").length * 7 + padX*2));
+      const estW = Math.max(70, Math.min(280, (text||"").length * 7 + padX*2));
       const estH = 24;
 
       const group = document.createElementNS(NS,"g");
@@ -256,7 +245,6 @@
       const { members, artifacts, companies, ma, ac, mc } = computeFiltered();
 
       // positions
-      // group members by branch to keep vertical blocks
       const byBranch = { legislative:[], executive:[], judicial:[] };
       members.forEach(m => (byBranch[m.branch]||byBranch.legislative).push(m));
       const starts = { legislative: memY0, executive: memY0 + memGapBranch, judicial: memY0 + memGapBranch*2 };
@@ -275,17 +263,16 @@
       const A = Object.fromEntries(artifacts.map(a=>[a.id,a]));
       const C = Object.fromEntries(companies.map(c=>[c.id,c]));
 
-      // clear layers
       const gM=$('members'), gA=$('artifacts'), gC=$('companies'),
             gMA=$('edges-ma'), gAC=$('edges-ac'), gMC=$('edges-mc'), gL=$('labels');
       clear(gM); clear(gA); clear(gC); clear(gMA); clear(gAC); clear(gMC); clear(gL);
 
-      // draw nodes
+      // nodes
       members.forEach(m=>drawMember(gM,m));
       artifacts.forEach(a=>drawArtifact(gA,a));
       companies.forEach(c=>drawCompany(gC,c));
 
-      // draw edges with labels
+      // edges + labels
       ma.forEach(e=>{
         const m=M[e.from], a=A[e.to]; if(!m||!a) return;
         const label = e.note || e.relation || "";
@@ -302,7 +289,7 @@
         drawEdgeWithLabel(gAC, gL, a._x, a._y-30, c._x-180, c._y, "#3b82f6", label);
       });
 
-      mc.forEach(e=>{
+      (mc||[]).forEach(e=>{
         const m=M[e.from], c=C[e.to]; if(!m||!c) return;
         const label = e.note || e.relation || "";
         drawEdgeWithLabel(gMC, gL, m._x+20, m._y, c._x-180, c._y, "#ef4444", label);
@@ -310,11 +297,16 @@
     }
 
     // events
-    $('search').addEventListener('input', e => { S.q = e.target.value; render(); });
+    document.getElementById('search').addEventListener('input', e => { S.q = e.target.value; render(); });
 
     // boot
-    fetch('data.json').then(r=>r.json()).then(d => { S.data = d; render(); })
-      .catch(err => { console.error(err); document.body.insertAdjacentHTML('beforeend','<div class="wrap"><div class="panel">Failed to load data.json</div></div>'); });
+    fetch('./data.json')
+      .then(r=>r.json())
+      .then(d => { S.data = d; render(); })
+      .catch(err => {
+        console.error(err);
+        document.body.insertAdjacentHTML('beforeend','<div class="wrap"><div class="panel">Failed to load ./data.json</div></div>');
+      });
   </script>
 </body>
 </html>
