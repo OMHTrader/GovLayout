@@ -1,30 +1,57 @@
 {
   "members": [
-    { "id": "L-001", "name": "Jane Doe", "branch": "legislative", "party": "R", "state": "NY", "role": "Chair, Appropriations" },
-    { "id": "E-001", "name": "Sander Gerber", "branch": "executive", "party": "I", "state": "DC", "role": "Member, Intelligence Advisory Board" },
-    { "id": "J-001", "name": "Pat Morgan", "branch": "judicial", "party": "", "state": "US", "role": "Associate Justice" }
+    {
+      "id": "E-001",
+      "name": "Sander Gerber",
+      "branch": "executive",
+      "party": "I",
+      "state": "DC",
+      "role": "Advisor, Intelligence Advisory Board"
+    }
   ],
   "artifacts": [
-    { "id": "118_hr_1234", "type": "law", "title": "Big Beautiful Bill", "short_title": "BBB — Golden Dome", "status": "enacted", "date": "2025-03-20", "tags": ["infrastructure","semiconductors"] },
-    { "id": "EO_14099", "type": "executive_order", "title": "Strengthening Domestic Manufacturing", "status": "issued", "date": "2025-04-05" },
-    { "id": "SCOTUS_24_101", "type": "opinion", "title": "Omega Robotics v. United States", "status": "decided", "date": "2025-06-01" }
+    {
+      "id": "118_hr_1234",
+      "type": "law",
+      "title": "Big Beautiful Bill",
+      "short_title": "BBB — Golden Dome",
+      "status": "enacted",
+      "date": "2025-03-20",
+      "tags": ["surveillance", "missile defense", "ISR"]
+    }
   ],
   "companies": [
-    { "id": "c-ACME", "name": "ACME SEMI CORP", "ticker": "ACME", "sector": "Semiconductors" },
-    { "id": "c-OMRB", "name": "OMEGA ROBOTICS INC", "ticker": "OMRB", "sector": "Aerospace" },
-    { "id": "c-RDW",  "name": "Redwire Corporation", "ticker": "RDW", "sector": "Space" }
+    {
+      "id": "c-RDW",
+      "name": "Redwire Corporation",
+      "ticker": "RDW",
+      "sector": "Space"
+    }
   ],
   "edges": {
     "member_artifact": [
-      { "from": "L-001", "to": "118_hr_1234", "relation": "sponsor", "note": "Appropriations sponsor" },
-      { "from": "E-001", "to": "EO_14099", "relation": "advises", "note": "Advisory input on EO scope" }
+      {
+        "from": "E-001",
+        "to": "118_hr_1234",
+        "relation": "advises",
+        "note": "PIAB focus areas: drone surveillance, missile defense, intelligence/surveillance/reconnaissance (illustrative)"
+      }
     ],
     "artifact_company": [
-      { "from": "118_hr_1234", "to": "c-ACME", "via": "grant", "amount": 1250000000, "agency": "Commerce", "note": "Golden Dome grant" },
-      { "from": "EO_14099", "to": "c-OMRB", "via": "rulemaking", "note": "Eligibility expanded" }
+      {
+        "from": "118_hr_1234",
+        "to": "c-RDW",
+        "via": "grant/contract",
+        "note": "Golden Dome funds toward surveillance of missiles, anti-missile defense, and ISR capabilities (illustrative)"
+      }
     ],
     "member_company": [
-      { "from": "E-001", "to": "c-RDW", "relation": "affiliation", "note": "Advisory ties (example)" }
+      {
+        "from": "E-001",
+        "to": "c-RDW",
+        "relation": "ownership",
+        "note": "Hedge fund holdings of ~131,252 shares (example)"
+      }
     ]
   }
 }
