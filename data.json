@@ -1,27 +1,30 @@
 {
   "members": [
-    { "id":"A000360", "name":"Jane Doe", "branch":"legislative", "chamber":"house", "state":"NY", "party":"R", "role":"Chair, Appropriations" },
-    { "id":"E-001",   "name":"Alex Taylor", "branch":"executive", "role":"Secretary of Commerce" },
-    { "id":"J-001",   "name":"Pat Morgan", "branch":"judicial", "role":"Associate Justice" }
+    { "id": "L-001", "name": "Jane Doe", "branch": "legislative", "party": "R", "state": "NY", "role": "Chair, Appropriations" },
+    { "id": "E-001", "name": "Sander Gerber", "branch": "executive", "party": "I", "state": "DC", "role": "Member, Intelligence Advisory Board" },
+    { "id": "J-001", "name": "Pat Morgan", "branch": "judicial", "party": "", "state": "US", "role": "Associate Justice" }
   ],
   "artifacts": [
-    { "id":"118_hr_1234", "type":"law", "title":"Big Beautiful Bill", "short_title":"BBB — Golden Dome", "status":"enacted", "date":"2025-03-20", "tags":["infrastructure","semiconductors"] },
-    { "id":"EO_14099", "type":"executive_order", "title":"Strengthening Domestic Manufacturing", "status":"issued", "date":"2025-04-05" },
-    { "id":"SCOTUS_24_101", "type":"opinion", "title":"Omega Robotics v. U.S.", "status":"decided", "date":"2025-06-01" }
+    { "id": "118_hr_1234", "type": "law", "title": "Big Beautiful Bill", "short_title": "BBB — Golden Dome", "status": "enacted", "date": "2025-03-20", "tags": ["infrastructure","semiconductors"] },
+    { "id": "EO_14099", "type": "executive_order", "title": "Strengthening Domestic Manufacturing", "status": "issued", "date": "2025-04-05" },
+    { "id": "SCOTUS_24_101", "type": "opinion", "title": "Omega Robotics v. United States", "status": "decided", "date": "2025-06-01" }
   ],
   "companies": [
-    { "id":"c-ACME", "name":"ACME SEMI CORP", "ticker":"ACME", "sector":"Semis" },
-    { "id":"c-OMRB", "name":"OMEGA ROBOTICS INC", "ticker":"OMRB", "sector":"Aerospace" }
+    { "id": "c-ACME", "name": "ACME SEMI CORP", "ticker": "ACME", "sector": "Semiconductors" },
+    { "id": "c-OMRB", "name": "OMEGA ROBOTICS INC", "ticker": "OMRB", "sector": "Aerospace" },
+    { "id": "c-RDW",  "name": "Redwire Corporation", "ticker": "RDW", "sector": "Space" }
   ],
   "edges": {
     "member_artifact": [
-      { "from":"A000360", "to":"118_hr_1234", "relation":"sponsor" },
-      { "from":"E-001",   "to":"EO_14099",    "relation":"issued" },
-      { "from":"J-001",   "to":"SCOTUS_24_101","relation":"joined" }
+      { "from": "L-001", "to": "118_hr_1234", "relation": "sponsor", "note": "Appropriations sponsor" },
+      { "from": "E-001", "to": "EO_14099", "relation": "advises", "note": "Advisory input on EO scope" }
     ],
     "artifact_company": [
-      { "from":"118_hr_1234", "to":"c-ACME", "via":"grant", "amount":1250000000, "agency":"Commerce" },
-      { "from":"EO_14099",    "to":"c-OMRB", "via":"rulemaking" }
+      { "from": "118_hr_1234", "to": "c-ACME", "via": "grant", "amount": 1250000000, "agency": "Commerce", "note": "Golden Dome grant" },
+      { "from": "EO_14099", "to": "c-OMRB", "via": "rulemaking", "note": "Eligibility expanded" }
+    ],
+    "member_company": [
+      { "from": "E-001", "to": "c-RDW", "relation": "affiliation", "note": "Advisory ties (example)" }
     ]
   }
 }
